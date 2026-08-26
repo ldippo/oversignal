@@ -19,6 +19,7 @@ import { shipById } from "./game/ships";
 import { moduleById } from "./game/modules";
 import { showUpgradeDraft } from "./ui/screens";
 import { showHangar } from "./ui/hangar";
+import { showPause } from "./ui/pause";
 import { attachInput, readInput } from "./ship/input";
 import { TouchControls, isTouchDevice } from "./ship/touch";
 import { Run } from "./game/run";
@@ -81,7 +82,7 @@ const stars = (() => {
 
 // ---------- game state ----------
 
-type GameState = "menu" | "run" | "warp" | "gameover";
+type GameState = "menu" | "run" | "paused" | "warp" | "gameover";
 let state: GameState = "menu";
 const save = loadSave();
 
@@ -108,8 +109,36 @@ const audioDebug = new AudioDebug(ui);
 const nowPlaying = new NowPlayingHud(ui);
 const juice = new Juice(scene, ui);
 const trails = new ShipTrails(scene, 0x4ef3ff);
-const touch = isTouchDevice() ? new TouchControls(ui) : null;
+const touch = isTouchDevice() ? new TouchControls(ui, () => pauseGame()) : null;
 touch?.setVisible(false);
+
+function applySettings(): void {
+  music.latencyOffset = save.settings.latencyMs / 1000;
+  juice.setAccessibility(save.settings.screenShake, save.settings.flashes);
+}
+
+let pauseOverlay: HTMLDivElement | null = null;
+
+function pauseGame(): void {
+  if (state !== "run") return;
+  state = "paused";
+  touch?.setVisible(false);
+  pauseOverlay = showPause(ui, save, music, applySettings, {
+    title: "PAUSED",
+    resumeLabel: "RESUME",
+    onClose: resumeGame,
+    onQuit: () => {
+      pauseOverlay = null;
+      returnToTitle();
+    },
+  });
+}
+
+function resumeGame(): void {
+  pauseOverlay = null;
+  state = "run";
+  touch?.setVisible(true);
+}
 let currentTheme = themeFor(0);
 let overlay: HTMLDivElement | null = null;
 
@@ -155,6 +184,7 @@ function startSegment(): void {
 }
 
 function flash(): void {
+  if (!save.settings.flashes) return;
   const el = document.createElement("div");
   el.className = "flash";
   ui.appendChild(el);
@@ -270,6 +300,13 @@ function restart(): void {
 
 window.addEventListener("keydown", (e) => {
   if (e.code === "KeyR" && state === "gameover" && !dailyMode) restart();
+  if (e.code === "Escape" || e.code === "KeyP") {
+    if (state === "run") pauseGame();
+    else if (state === "paused" && pauseOverlay) {
+      pauseOverlay.remove();
+      resumeGame();
+    }
+  }
 });
 
 // ---------- camera ----------
@@ -298,7 +335,7 @@ function updateCamera(dt: number): void {
   camera.lookAt(camTarget);
   // bass rumble + event shake + hit kick
   camera.position.addScaledVector(camFrame.tangent, -juice.camKick);
-  const shake = music.bass * 0.22 + (music.dropActive ? 0.2 : 0) + juice.shake * 0.5;
+  const shake = (save.settings.screenShake ? music.bass * 0.22 + (music.dropActive ? 0.2 : 0) : 0) + juice.shake * 0.5;
   camera.position.x += (Math.random() - 0.5) * shake;
   camera.position.y += (Math.random() - 0.5) * shake;
   stars.position.copy(ship.object.position);
@@ -322,6 +359,10 @@ const loop = new GameLoop(
         camInit = false;
       }
       updateCamera(dt);
+      return;
+    }
+    if (state === "paused") {
+      music.update(dt); // beat keeps running so the calibration dot is live
       return;
     }
     if (state === "warp") {
@@ -517,6 +558,12 @@ function openMenu(): void {
     () => showHangar(ui, save, openMenu),
     music.sourceLabel !== "none",
     startDaily,
+    () =>
+      showPause(ui, save, music, applySettings, {
+        title: "SETTINGS",
+        resumeLabel: "CLOSE",
+        onClose: () => {},
+      }),
   );
 }
 
@@ -547,6 +594,7 @@ function returnToTitle(): void {
 }
 
 hud.setVisible(false);
+applySettings();
 startSegment(); // attract-mode world behind the title
 void handleRedirect()
   .catch(() => {}) // failed token exchange → menu just shows disconnected

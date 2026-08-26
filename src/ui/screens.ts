@@ -11,6 +11,7 @@ export function showMenu(
   onHangar: () => void,
   hasAudio = false,
   onDaily?: () => void,
+  onSettings?: () => void,
 ): HTMLDivElement {
   const dailyDone = playedToday(save);
   const hasTab = !!navigator.mediaDevices?.getDisplayMedia;
@@ -53,6 +54,7 @@ export function showMenu(
       <span class="foot-stat">BEST ${save.bestScore.toLocaleString()}</span>
       <span class="foot-spacer"></span>
       <button class="foot-link hangar-btn">HANGAR — ${save.selectedShip.toUpperCase()}</button>
+      <button class="foot-link settings-btn">SETTINGS</button>
       <button class="foot-link sp-main"></button>
     </div>
     <div class="sp-setup" hidden>
@@ -72,6 +74,10 @@ export function showMenu(
   el.querySelector<HTMLButtonElement>(".hangar-btn")!.addEventListener("click", () => {
     el.remove();
     onHangar();
+  });
+
+  el.querySelector<HTMLButtonElement>(".settings-btn")!.addEventListener("click", () => {
+    onSettings?.();
   });
 
   const dailyBtn = el.querySelector<HTMLButtonElement>(".daily-btn")!;

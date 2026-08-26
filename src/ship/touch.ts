@@ -31,7 +31,7 @@ export class TouchControls {
   private root: HTMLDivElement;
   private steerTouches = new Map<number, number>(); // touch id -> -1 | 1
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, onPause?: () => void) {
     this.root = document.createElement("div");
     this.root.className = "touch-controls";
     this.root.innerHTML = `
@@ -39,6 +39,7 @@ export class TouchControls {
       <div class="steer-zone steer-right"><span>▶</span></div>
       <button class="touch-btn touch-brake">BRAKE</button>
       <button class="touch-btn touch-dash">DASH</button>
+      <button class="touch-pause">⏸</button>
     `;
     parent.appendChild(this.root);
     state.active = true;
@@ -70,6 +71,7 @@ export class TouchControls {
     brake.addEventListener("touchend", () => { state.brake = false; });
     brake.addEventListener("touchcancel", () => { state.brake = false; });
     dash.addEventListener("touchstart", (e) => { e.preventDefault(); state.dashQueued = true; }, { passive: false });
+    this.root.querySelector<HTMLButtonElement>(".touch-pause")!.addEventListener("click", () => onPause?.());
   }
 
   private recompute(): void {

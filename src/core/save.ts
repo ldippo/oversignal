@@ -1,6 +1,13 @@
 import { META_TRACKS, tierCost, type MetaTrackId } from "../game/meta";
 import type { DailyResult } from "../game/daily";
 
+export interface Settings {
+  sfxVolume: number; // 0..1
+  screenShake: boolean;
+  flashes: boolean; // photosensitivity: damage vignette, rail strobe, warp flash
+  latencyMs: number; // beat-grid offset, −200..200
+}
+
 export interface SaveData {
   v: number;
   scrap: number;
@@ -11,6 +18,7 @@ export interface SaveData {
   ownedModules: string[];
   loadouts: Record<string, string[]>; // shipId -> socketed module ids
   daily: DailyResult | null; // today's (or last played) daily run
+  settings: Settings;
 }
 
 const KEY = "fzero-save-v1";
@@ -25,6 +33,7 @@ const DEFAULTS: SaveData = {
   ownedModules: [],
   loadouts: {},
   daily: null,
+  settings: { sfxVolume: 0.5, screenShake: true, flashes: true, latencyMs: 0 },
 };
 
 interface LegacySave extends Partial<SaveData> {
@@ -53,6 +62,7 @@ export function loadSave(): SaveData {
         ownedShips: parsed.ownedShips?.length ? parsed.ownedShips : [...DEFAULTS.ownedShips],
         ownedModules: parsed.ownedModules ?? [],
         loadouts: parsed.loadouts ?? {},
+        settings: { ...DEFAULTS.settings, ...(parsed.settings ?? {}) },
       };
       if (parsed.meta) {
         save.scrap += legacyRefund(parsed.meta);
@@ -64,7 +74,13 @@ export function loadSave(): SaveData {
   } catch {
     // corrupted save → fresh start
   }
-  return { ...DEFAULTS, ownedShips: [...DEFAULTS.ownedShips], ownedModules: [], loadouts: {} };
+  return {
+    ...DEFAULTS,
+    ownedShips: [...DEFAULTS.ownedShips],
+    ownedModules: [],
+    loadouts: {},
+    settings: { ...DEFAULTS.settings },
+  };
 }
 
 export function persistSave(data: SaveData): void {

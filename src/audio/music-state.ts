@@ -18,6 +18,8 @@ export class MusicState {
   beatConfidence = 0;
   dropActive = false;
   dropTimer = 0;
+  /** Player-calibrated grid offset in seconds (settings.latencyMs / 1000). */
+  latencyOffset = 0;
 
   private analyser: SpectrumAnalyser | null = null;
   private beats = new BeatTracker();
@@ -121,9 +123,10 @@ export class MusicState {
     }
   }
 
-  /** Beat phase 0..1 (0 = on beat). */
+  /** Beat phase 0..1 (0 = on beat), shifted by the latency calibration. */
   phase(): number {
-    return this.silent ? (this.time % 0.5) / 0.5 : this.beats.phase(this.time);
+    const t = this.time + this.latencyOffset;
+    return this.silent ? ((t % 0.5) + 0.5) % 0.5 / 0.5 : this.beats.phase(t);
   }
 
   /** True within ±window seconds of the predicted beat. */
@@ -135,7 +138,8 @@ export class MusicState {
   }
 
   untilNextBeat(): number {
-    if (this.silent) return 0.5 - (this.time % 0.5);
-    return this.beats.untilNextBeat(this.time);
+    const t = this.time + this.latencyOffset;
+    if (this.silent) return 0.5 - (((t % 0.5) + 0.5) % 0.5);
+    return this.beats.untilNextBeat(t);
   }
 }

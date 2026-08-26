@@ -15,9 +15,17 @@ export class Juice {
   shake = 0;
   /** Adaptive loudness: fx scale with music energy (0.55 quiet … ~1.2 chorus). */
   intensity = 1;
+  // accessibility gates (settings)
+  shakeEnabled = true;
+  flashesEnabled = true;
 
   setIntensity(energy: number): void {
     this.intensity = 0.55 + energy * 0.7;
+  }
+
+  setAccessibility(shake: boolean, flashes: boolean): void {
+    this.shakeEnabled = shake;
+    this.flashesEnabled = flashes;
   }
 
   private particles: THREE.Points;
@@ -116,6 +124,7 @@ export class Juice {
   }
 
   rumble(strength: number): void {
+    if (!this.shakeEnabled) return;
     this.shake = Math.min(1.2, this.shake + strength * this.intensity);
   }
 
@@ -135,6 +144,7 @@ export class Juice {
 
   /** Damage flash: red glitch vignette (CSS-driven). */
   damageFlash(): void {
+    if (!this.flashesEnabled) return;
     const el = document.createElement("div");
     el.className = "damage-vignette";
     this.textLayer.appendChild(el);
@@ -155,6 +165,7 @@ export class Juice {
   }
 
   strobeRails(): void {
+    if (!this.flashesEnabled) return;
     this.strobeT = 1;
   }
 
