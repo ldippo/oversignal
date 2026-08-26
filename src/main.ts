@@ -184,20 +184,34 @@ function finishSegment(): void {
 function gameOver(): void {
   state = "gameover";
   touch?.setVisible(false);
+  hud.setVisible(false);
   const payout = run.payout();
+  const prevBest = save.bestScore;
   bankRun(save, payout, run.score);
+  const newBest = Math.floor(run.score) > prevBest;
   overlay = document.createElement("div");
-  overlay.className = "screen";
+  overlay.className = "end-screen";
   overlay.innerHTML = `
-    <h2>SHIP DESTROYED</h2>
-    <div class="stat">SECTOR ${run.segmentIndex + 1} · SCORE ${Math.floor(run.score)} · BEST COMBO ×${run.bestCombo}</div>
-    <div class="stat">SCRAP +${payout} → ${save.scrap} BANKED</div>
-    <button id="retry">RETRY [R]</button>
-    <button id="menu" class="secondary">CHANGE MUSIC / MENU</button>
+    <div class="end-block">
+      <h2 class="end-title">SIGNAL LOST</h2>
+      <p class="end-sub">${newBest ? "NEW BEST RUN" : `SECTOR ${run.segmentIndex + 1}`}</p>
+    </div>
+    <div class="end-actions">
+      <div class="end-payout">+${payout} <span>SCRAP</span></div>
+      <div class="end-stats">
+        <span>SCORE ${Math.floor(run.score).toLocaleString()}</span>
+        <span>SECTOR ${run.segmentIndex + 1}</span>
+        <span>COMBO ×${run.bestCombo}</span>
+        <span>◆ ${save.scrap} BANKED</span>
+      </div>
+      <button class="retry-btn"><span>RETRY</span></button>
+      <button class="alt end-menu">change music</button>
+    </div>
+    <div class="end-footer"></div>
   `;
   ui.appendChild(overlay);
-  overlay.querySelector("#retry")!.addEventListener("click", restart);
-  overlay.querySelector("#menu")!.addEventListener("click", () => window.location.reload());
+  overlay.querySelector(".retry-btn")!.addEventListener("click", restart);
+  overlay.querySelector(".end-menu")!.addEventListener("click", () => window.location.reload());
 }
 
 /** Fresh run with the selected ship's stats + socketed modules applied. */
@@ -223,6 +237,7 @@ function restart(): void {
   overlay = null;
   run = newRun();
   ship.speed = 0;
+  hud.setVisible(true);
   state = "run";
   startSegment();
 }
