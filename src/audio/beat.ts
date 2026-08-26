@@ -55,7 +55,7 @@ export class BeatTracker {
   }
 
   private estimateTempo(): void {
-    if (this.iois.length < 4) return;
+    if (this.iois.length < 3) return;
     // fold every IOI into 70-180 BPM, then take the median
     const bpms = this.iois.map((ioi) => {
       let b = 60 / ioi;
@@ -65,11 +65,12 @@ export class BeatTracker {
     });
     bpms.sort((a, b) => a - b);
     const median = bpms[Math.floor(bpms.length / 2)];
-    // spread → confidence
+    // spread → base confidence (grid hits in realign() add the rest)
     const q1 = bpms[Math.floor(bpms.length * 0.25)];
     const q3 = bpms[Math.floor(bpms.length * 0.75)];
     const spread = (q3 - q1) / median;
-    this.confidence = Math.max(0, Math.min(1, 1 - spread * 4));
+    const base = Math.max(0, Math.min(1, 1 - spread * 2.2));
+    this.confidence = Math.max(this.confidence * 0.9, base);
     // ease toward the median so the grid doesn't jump
     this.bpm += (median - this.bpm) * (this.confidence > 0.5 ? 0.4 : 0.15);
   }
@@ -81,8 +82,13 @@ export class BeatTracker {
     const signed = err > 0.5 ? err - 1 : err;
     if (Math.abs(signed) < 0.35) {
       this.anchor += signed * interval * 0.5;
-    } else if (this.confidence < 0.4) {
-      this.anchor = now;
+      // steady onsets landing near the grid are the strongest lock signal
+      if (Math.abs(signed) < 0.16) {
+        this.confidence = Math.min(1, this.confidence + 0.07);
+      }
+    } else {
+      this.confidence *= 0.92;
+      if (this.confidence < 0.4) this.anchor = now;
     }
   }
 

@@ -24,20 +24,59 @@ export class MusicState {
   private analyser: SpectrumAnalyser | null = null;
   private beats = new BeatTracker();
   private capture: AudioCapture | null = null;
+  private analysisTimer: number | null = null;
 
   private baseline = 0.25; // long-EMA of level
   private lull = 0; // seconds spent quiet
   private time = 0;
+  private audioNow = 0; // AudioContext clock — beat truth for live capture
+  private lastAudio = 0;
   private lastBeatIndex = -1;
 
   setCapture(capture: AudioCapture | null): void {
     this.capture?.stop();
+    if (this.analysisTimer !== null) clearInterval(this.analysisTimer);
+    this.analysisTimer = null;
     this.capture = capture;
     this.analyser = capture?.analyser ? new SpectrumAnalyser(capture.analyser) : null;
     this.beats = new BeatTracker();
     // silent mode's clock is perfect from frame zero; live audio must earn confidence
     this.beatConfidence = this.analyser ? 0 : 1;
     if (!this.analyser) this.bpm = 120;
+    // analysis runs on its own steady timer: rAF throttles under load/occlusion
+    // and would jitter onset timestamps into useless IOIs
+    if (this.analyser) {
+      this.analysisTimer = window.setInterval(() => this.analyze(), 25);
+    }
+  }
+
+  private analyze(): void {
+    if (!this.analyser || !this.capture?.ctx) return;
+    const now = this.capture.ctx.currentTime;
+    const audioDt = now - this.lastAudio;
+    if (audioDt < 0.01) return;
+    this.lastAudio = now;
+    this.audioNow = now;
+    const sdt = Math.min(audioDt, 0.1);
+    this.analyser.update();
+    const a = this.analyser;
+
+    this.bass += (a.bass - this.bass) * Math.min(1, 18 * sdt);
+    this.mid += (a.mid - this.mid) * Math.min(1, 12 * sdt);
+    this.high += (a.high - this.high) * Math.min(1, 12 * sdt);
+
+    // baseline: slow EMA; energy: level relative to baseline, centered at 0.5
+    this.baseline += (a.level - this.baseline) * Math.min(1, 0.64 * sdt);
+    const rel = this.baseline > 0.02 ? a.level / this.baseline : 1;
+    const target = Math.max(0, Math.min(1, 0.5 * rel));
+    const rate = target > this.energy ? 6 : 2.2; // fast attack, slow release
+    this.energy += (target - this.energy) * Math.min(1, rate * sdt);
+
+    this.beats.update(a.flux, now);
+    this.bpm = this.beats.bpm;
+    this.beatConfidence = this.beats.confidence;
+
+    this.updateDrop(sdt, a.level);
   }
 
   get sourceLabel(): string {
@@ -57,29 +96,14 @@ export class MusicState {
     this.time += dt;
 
     if (this.analyser) {
-      this.analyser.update();
-      const a = this.analyser;
-
-      this.bass += (a.bass - this.bass) * Math.min(1, 18 * dt);
-      this.mid += (a.mid - this.mid) * Math.min(1, 12 * dt);
-      this.high += (a.high - this.high) * Math.min(1, 12 * dt);
-
-      // baseline: slow EMA; energy: level relative to baseline, centered at 0.5
-      this.baseline += (a.level - this.baseline) * Math.min(1, 0.08 * dt * 8);
-      const rel = this.baseline > 0.02 ? a.level / this.baseline : 1;
-      const target = Math.max(0, Math.min(1, 0.5 * rel));
-      const rate = target > this.energy ? 6 : 2.2; // fast attack, slow release
-      this.energy += (target - this.energy) * Math.min(1, rate * dt);
-
-      this.beats.update(a.flux, this.time);
-      this.bpm = this.beats.bpm;
-      this.beatConfidence = this.beats.confidence;
-
-      this.updateDrop(dt, a.level);
-
-      // pulse from the *predicted* grid, not raw onsets
-      const phase = this.beats.phase(this.time);
-      const beatIndex = Math.floor(this.time / (60 / this.bpm) - phase);
+      // analysis runs on its own timer (see analyze()) AND from here — the
+      // audioDt guard dedupes, and browsers throttle timers and rAF under
+      // different conditions, so together coverage stays steady
+      this.analyze();
+      const now = this.capture?.ctx?.currentTime ?? this.audioNow;
+      this.audioNow = now;
+      const phase = this.beats.phase(now);
+      const beatIndex = Math.floor(now / (60 / this.bpm) - phase);
       if (phase < 0.12 && beatIndex !== this.lastBeatIndex) {
         this.beatPulse = 1;
         this.beatCount++;
@@ -125,7 +149,7 @@ export class MusicState {
 
   /** Beat phase 0..1 (0 = on beat), shifted by the latency calibration. */
   phase(): number {
-    const t = this.time + this.latencyOffset;
+    const t = (this.silent ? this.time : this.audioNow) + this.latencyOffset;
     return this.silent ? ((t % 0.5) + 0.5) % 0.5 / 0.5 : this.beats.phase(t);
   }
 
@@ -138,8 +162,10 @@ export class MusicState {
   }
 
   untilNextBeat(): number {
-    const t = this.time + this.latencyOffset;
-    if (this.silent) return 0.5 - (((t % 0.5) + 0.5) % 0.5);
-    return this.beats.untilNextBeat(t);
+    if (this.silent) {
+      const t = this.time + this.latencyOffset;
+      return 0.5 - (((t % 0.5) + 0.5) % 0.5);
+    }
+    return this.beats.untilNextBeat(this.audioNow + this.latencyOffset);
   }
 }
