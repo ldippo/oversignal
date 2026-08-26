@@ -8,10 +8,12 @@ import { PostFx } from "./fx/post";
 import { themeFor } from "./fx/palette";
 import { Environment } from "./fx/environment";
 import { WarpTunnel } from "./fx/warp";
-import { Ship, BASE_STATS } from "./ship/ship";
+import { Ship } from "./ship/ship";
 import { loadSave, bankRun } from "./core/save";
 import { draftUpgrades } from "./game/upgrades";
+import { shipById } from "./game/ships";
 import { showUpgradeDraft } from "./ui/screens";
+import { showHangar } from "./ui/hangar";
 import { attachInput, readInput } from "./ship/input";
 import { Run } from "./game/run";
 import { Hud } from "./ui/hud";
@@ -177,11 +179,25 @@ function gameOver(): void {
   overlay.querySelector("#menu")!.addEventListener("click", () => window.location.reload());
 }
 
+/** Fresh run with the selected ship's stats + permanent meta upgrades applied. */
+function newRun(): Run {
+  const def = shipById(save.selectedShip);
+  ship.setDef(def);
+  const r = new Run((Math.random() * 0xffffffff) >>> 0);
+  r.mods.hullMax = Math.max(30, r.mods.hullMax + def.stats.hullDelta + save.meta.plating * 10);
+  r.hull = r.mods.hullMax;
+  r.mods.rhythmWindow += def.stats.rhythmDelta + save.meta.groove * 0.01;
+  r.mods.boostPower += def.stats.boostDelta + save.meta.boost * 0.08;
+  r.mods.scrapMult += save.meta.salvage * 0.1;
+  r.mods.shieldPerSegment += def.stats.shieldPerSegment;
+  r.mods.magnetRadius += def.stats.magnetDelta;
+  return r;
+}
+
 function restart(): void {
   overlay?.remove();
   overlay = null;
-  run = new Run((Math.random() * 0xffffffff) >>> 0);
-  ship.stats = { ...BASE_STATS };
+  run = newRun();
   ship.speed = 0;
   state = "run";
   startSegment();
@@ -325,18 +341,26 @@ const loop = new GameLoop(
   },
 );
 
-hud.setVisible(false);
-void handleRedirect()
-  .catch(() => {}) // failed token exchange → menu just shows disconnected
-  .then(() => {
-    showMenu(ui, save, async (kind) => {
+function openMenu(): void {
+  showMenu(
+    ui,
+    save,
+    async (kind) => {
       await pickAudio(kind);
       hud.setVisible(true);
       nowPlaying.startPolling();
+      run = newRun();
       state = "run";
       startSegment();
-    });
-  });
+    },
+    () => showHangar(ui, save, openMenu),
+  );
+}
+
+hud.setVisible(false);
+void handleRedirect()
+  .catch(() => {}) // failed token exchange → menu just shows disconnected
+  .then(openMenu);
 loop.start();
 
 // dev/test hook (harmless in prod; lets automation poke game state)

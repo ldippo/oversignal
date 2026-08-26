@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { TrackSpline, makeFrame } from "../track/spline";
 import type { InputState } from "./input";
+import { shipById, type ShipDef } from "../game/ships";
 
 export interface ShipStats {
   maxSpeed: number; // m/s
@@ -22,52 +23,62 @@ export const BASE_STATS: ShipStats = {
 
 const HOVER_HEIGHT = 1.1;
 
-function buildShipMesh(): THREE.Group {
+function buildShipMesh(def: ShipDef): THREE.Group {
   const group = new THREE.Group();
+  const [sx, sy, sz] = def.bodyScale;
 
   const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0x2244aa,
+    color: def.primary,
     roughness: 0.35,
     metalness: 0.7,
   });
   const accentMat = new THREE.MeshStandardMaterial({
-    color: 0x4ef3ff,
-    emissive: 0x2288aa,
+    color: def.accent,
+    emissive: new THREE.Color(def.accent).multiplyScalar(0.5),
     roughness: 0.3,
     metalness: 0.5,
   });
-  const glowMat = new THREE.MeshBasicMaterial({ color: 0x77e6ff });
+  const glowMat = new THREE.MeshBasicMaterial({ color: def.accent });
 
   // main hull: stretched cone pointing forward (-Z is three.js forward; we use +tangent, handled by basis)
-  const hull = new THREE.Mesh(new THREE.ConeGeometry(1.1, 4.6, 6), bodyMat);
+  const hull = new THREE.Mesh(new THREE.ConeGeometry(1.1 * sx, 4.6 * sz, 6), bodyMat);
   hull.rotation.x = -Math.PI / 2; // cone tip points -Z (model forward)
-  hull.scale.y = 1;
-  hull.scale.z = 0.45; // flatten
+  hull.scale.z = 0.45 * sy; // flatten
   group.add(hull);
 
   const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), accentMat);
-  canopy.position.set(0, 0.35, 0.4);
-  canopy.scale.set(0.8, 0.6, 1.4);
+  canopy.position.set(0, 0.35 * sy, 0.4);
+  canopy.scale.set(0.8 * sx, 0.6 * sy, 1.4);
   group.add(canopy);
 
-  const podGeo = new THREE.CapsuleGeometry(0.38, 1.6, 4, 8);
+  const podGeo = new THREE.CapsuleGeometry(0.38, 1.6 * sz, 4, 8);
   for (const side of [-1, 1]) {
     const pod = new THREE.Mesh(podGeo, bodyMat);
     pod.rotation.x = Math.PI / 2;
-    pod.position.set(side * 1.35, -0.1, 0.9);
+    pod.position.set(side * 1.35 * sx, -0.1, 0.9);
     group.add(pod);
 
     const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.2, 10), glowMat);
     nozzle.rotation.x = Math.PI / 2;
-    nozzle.position.set(side * 1.35, -0.1, 1.85);
+    nozzle.position.set(side * 1.35 * sx, -0.1, 0.9 + 0.95 * sz);
     group.add(nozzle);
   }
 
-  const engineLight = new THREE.PointLight(0x55ccff, 8, 18);
+  const engineLight = new THREE.PointLight(def.accent, 8, 18);
   engineLight.position.set(0, 0.2, 2.2);
   group.add(engineLight);
 
   return group;
+}
+
+function disposeChildren(group: THREE.Group): void {
+  for (const child of [...group.children]) {
+    const mesh = child as THREE.Mesh;
+    mesh.geometry?.dispose();
+    const mat = mesh.material as THREE.Material | undefined;
+    mat?.dispose();
+    group.remove(child);
+  }
 }
 
 export class Ship {
@@ -80,6 +91,7 @@ export class Ship {
 
   readonly object: THREE.Group;
   stats: ShipStats = { ...BASE_STATS };
+  def: ShipDef = shipById("stinger");
 
   private frame = makeFrame();
   private roll = 0;
@@ -88,7 +100,21 @@ export class Ship {
   private wallContact = false;
 
   constructor(private spline: TrackSpline, private trackHalfWidth: number) {
-    this.object = buildShipMesh();
+    this.object = buildShipMesh(this.def);
+  }
+
+  /** Swap model + apply the def's stat multipliers over base stats. */
+  setDef(def: ShipDef): void {
+    this.def = def;
+    disposeChildren(this.object);
+    const built = buildShipMesh(def);
+    for (const child of [...built.children]) this.object.add(child);
+    this.stats = {
+      ...BASE_STATS,
+      maxSpeed: BASE_STATS.maxSpeed * def.stats.maxSpeedMult,
+      accel: BASE_STATS.accel * def.stats.accelMult,
+      lateralSpeed: BASE_STATS.lateralSpeed * def.stats.lateralMult,
+    };
   }
 
   setSpline(spline: TrackSpline, halfWidth: number): void {

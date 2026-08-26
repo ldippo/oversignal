@@ -7,6 +7,7 @@ export function showMenu(
   parent: HTMLElement,
   save: SaveData,
   onStart: (kind: AudioSourceKind) => Promise<void>,
+  onHangar: () => void,
 ): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "screen";
@@ -15,6 +16,7 @@ export function showMenu(
     <p>Anti-gravity roguelite racer that runs on your music.<br/>
     Put Spotify (or anything) in another tab, then sync it here.</p>
     <div class="stat">SCRAP ${save.scrap} · BEST ${save.bestScore} · RUNS ${save.totalRuns}</div>
+    <button class="secondary hangar-btn">HANGAR · SHIP: ${save.selectedShip.toUpperCase()}</button>
     <button data-src="tab">SYNC TAB AUDIO</button>
     <button data-src="mic" class="secondary">USE MICROPHONE</button>
     <button data-src="silent" class="secondary">RUN SILENT (120 BPM)</button>
@@ -37,6 +39,11 @@ export function showMenu(
   `;
   parent.appendChild(el);
   const err = el.querySelector<HTMLParagraphElement>(".err")!;
+
+  el.querySelector<HTMLButtonElement>(".hangar-btn")!.addEventListener("click", () => {
+    el.remove();
+    onHangar();
+  });
 
   // Spotify now-playing (optional, cosmetic)
   const spMain = el.querySelector<HTMLButtonElement>(".sp-main")!;
