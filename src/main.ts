@@ -98,6 +98,34 @@ let fenceOpenNow = false;
 let ringChain = 0;
 let chainForgive = 0;
 let dailyMode = false;
+let lowConfTime = 0;
+let tipScanTimer = 0;
+
+/** One-shot onboarding callout, persisted so it never repeats. */
+function tip(id: string, text: string): void {
+  if (save.seenTips.includes(id)) return;
+  save.seenTips.push(id);
+  persistSave(save);
+  hud.showTip(text);
+}
+
+/** Scan upcoming features and teach each mechanic on first approach. */
+function onboardingScan(): void {
+  if (!features) return;
+  if (run.segmentIndex === 0 && ship.s < 12) {
+    tip("controls", touch ? "HOLD A SIDE TO STEER" : "STEER A/D · HOLD W");
+  }
+  for (const f of features.features) {
+    if (f.taken || f.s < ship.s || f.s > ship.s + 150) continue;
+    if (f.kind === "gate") tip("gate", "HIT GATES ON THE BEAT");
+    else if (f.kind === "ring") tip("ring", "FOLLOW THE RINGS — CHAIN THEM");
+    else if (f.kind === "fence") tip("fence", "FENCES OPEN ON THE BEAT — TIME IT");
+    else if (f.kind === "core") tip("core", "RISKY CORES REPAIR HULL");
+    else if ((f.kind === "shard" || f.kind === "barrier") && run.dashPips >= 1) {
+      tip("dash", touch ? "TAP DASH TO SMASH HAZARDS" : "SPACE — DASH THROUGH HAZARDS");
+    }
+  }
+}
 
 const ship = new Ship(generateSegment({ seed: 1, difficulty: 0 }).spline, 14);
 scene.add(ship.object);
@@ -179,6 +207,7 @@ function startSegment(): void {
   ship.lateral = 0;
   ship.speed = Math.min(ship.speed, 40);
   run.shields = run.mods.shieldPerSegment;
+  lowConfTime = 0;
   camInit = false;
   if (state !== "menu") {
     touch?.setVisible(true);
@@ -520,6 +549,19 @@ const loop = new GameLoop(
       }
     }
 
+    tipScanTimer += dt;
+    if (tipScanTimer > 0.5) {
+      tipScanTimer = 0;
+      onboardingScan();
+    }
+    if (!music.silent && music.beatConfidence < 0.3) {
+      lowConfTime += dt;
+      if (lowConfTime > 20) {
+        lowConfTime = -Infinity; // once per run
+        tip("lowsync", "BEAT UNCLEAR — RUNNING ON INTERNAL CLOCK");
+      }
+    }
+
     if (ship.hitWall) {
       sfx.scrape();
       run.damage(WALL_DPS * (0.3 + (ship.speed / ship.stats.maxSpeed) * 0.7) * dt);
@@ -554,6 +596,7 @@ const loop = new GameLoop(
     }
     post.update(music.energy, music.beatPulse, music.dropActive);
     hud.update(run, ship.speed * 3.6, 1 / 60);
+    hud.updateSync(music.beatConfidence, music.silent, music.beatPulse);
     audioDebug.update(music);
     nowPlaying.update();
     post.render();

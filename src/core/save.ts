@@ -19,6 +19,7 @@ export interface SaveData {
   loadouts: Record<string, string[]>; // shipId -> socketed module ids
   daily: DailyResult | null; // today's (or last played) daily run
   settings: Settings;
+  seenTips: string[]; // one-shot onboarding callouts already shown
 }
 
 const KEY = "fzero-save-v1";
@@ -34,6 +35,7 @@ const DEFAULTS: SaveData = {
   loadouts: {},
   daily: null,
   settings: { sfxVolume: 0.5, screenShake: true, flashes: true, latencyMs: 0 },
+  seenTips: [],
 };
 
 interface LegacySave extends Partial<SaveData> {
@@ -63,6 +65,7 @@ export function loadSave(): SaveData {
         ownedModules: parsed.ownedModules ?? [],
         loadouts: parsed.loadouts ?? {},
         settings: { ...DEFAULTS.settings, ...(parsed.settings ?? {}) },
+        seenTips: parsed.seenTips ?? [],
       };
       if (parsed.meta) {
         save.scrap += legacyRefund(parsed.meta);
@@ -80,6 +83,7 @@ export function loadSave(): SaveData {
     ownedModules: [],
     loadouts: {},
     settings: { ...DEFAULTS.settings },
+    seenTips: [],
   };
 }
 

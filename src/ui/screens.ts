@@ -53,6 +53,7 @@ export function showMenu(
       <span class="foot-stat">◆ ${save.scrap} SCRAP</span>
       <span class="foot-stat">BEST ${save.bestScore.toLocaleString()}</span>
       <span class="foot-spacer"></span>
+      <span class="foot-controls">W ACCEL · A/D STEER · SPACE DASH</span>
       <button class="foot-link hangar-btn">HANGAR — ${save.selectedShip.toUpperCase()}</button>
       <button class="foot-link settings-btn">SETTINGS</button>
       <button class="foot-link sp-main"></button>
