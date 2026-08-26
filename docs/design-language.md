@@ -59,6 +59,8 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 | Ghost wireframe | 4 | 5 | 4 | 3 | 3 | n/a | PASS — flicker, pure signal |
 | Signal shard cluster | 4 | 4 | 4 | 3 | 3 | n/a | PASS — dominant spire + shared-axis satellites |
 | Hero landmarks ×4 | 4 | 4 | 4 | 3 | 4 | n/a | PASS — energy-driven glow bands |
+| Tunnel arches | 4 | 4 | 4 | 3 | 4 | n/a | PASS — beat-pulsing ring corridor |
+| Mega-gate | 5 | 3 | 4 | 4 | 4 | 5 | PASS — double-beam silhouette, doubled fx |
 
 Retired: box pylon, monolith, rock (replaced by kit).
 Juice is adaptive: all burst/kick/rumble intensity scales with music energy

@@ -95,6 +95,8 @@ export class Ship {
   def: ShipDef = shipById("stinger");
 
   private frame = makeFrame();
+  private steerSmooth = 0;
+  private lateralVel = 0;
   private roll = 0;
   private time = 0;
   private basis = new THREE.Matrix4();
@@ -173,24 +175,32 @@ export class Ship {
 
     this.s += this.speed * dt;
 
-    // steering scales with forward speed so a stopped ship doesn't strafe;
-    // dashes commit — steering authority halves mid-dash
-    const steerAuthority = Math.min(1, this.speed / 30) * (this.dashing ? 0.5 : 1);
-    this.lateral += input.steer * st.lateralSpeed * steerAuthority * dt;
+    // lateral velocity model: input shapes a target velocity (fast attack,
+    // slower release), velocity carries brief momentum — taps micro-adjust,
+    // full holds sweep the track in ~0.5s. Dashes commit: authority halves.
+    const attack = Math.abs(input.steer) > Math.abs(this.steerSmooth);
+    this.steerSmooth += (input.steer - this.steerSmooth) * Math.min(1, (attack ? 12.5 : 8.3) * dt);
+    const authority = Math.min(1, this.speed / 30) * (this.dashing ? 0.5 : 1);
+    const targetVel = this.steerSmooth * st.lateralSpeed * authority;
+    const velRate = Math.abs(targetVel) < Math.abs(this.lateralVel) ? 15 : 10; // stop snappier than start
+    this.lateralVel += (targetVel - this.lateralVel) * Math.min(1, velRate * dt);
+    this.lateral += this.lateralVel * dt;
 
     const limit = this.trackHalfWidth - 1.6;
     this.wallContact = false;
     if (this.lateral > limit) {
       this.lateral = limit;
+      this.lateralVel = Math.min(0, this.lateralVel);
       this.wallContact = true;
     } else if (this.lateral < -limit) {
       this.lateral = -limit;
+      this.lateralVel = Math.max(0, this.lateralVel);
       this.wallContact = true;
     }
     if (this.wallContact) this.speed *= 1 - 1.8 * dt; // scrape friction
 
-    // visual roll into the turn
-    const targetRoll = -input.steer * 0.45;
+    // visual roll follows actual lateral motion, not raw input
+    const targetRoll = -(this.lateralVel / st.lateralSpeed) * 0.55;
     this.roll += (targetRoll - this.roll) * Math.min(1, 8 * dt);
 
     this.pose();

@@ -445,19 +445,21 @@ const loop = new GameLoop(
     for (const ev of features.check(prevS, ship.s, ship.lateral, run.mods.magnetRadius)) {
       const fpos = ev.feature.mesh.position;
       if (ev.kind === "gate") {
+        const mega = !!ev.feature.mega;
+        if (mega) run.earnPip(1); // mega-gate always charges a pip
         if (music.onBeat(run.mods.rhythmWindow)) {
           run.combo++;
           run.bestCombo = Math.max(run.bestCombo, run.combo);
-          run.addScore(120);
+          run.addScore(mega ? 240 : 120);
           run.heal(run.mods.hullRegenOnBeat);
           run.earnPip(1);
-          ship.applyBoost(0.42 * run.mods.boostPower, 1.6);
-          sfx.gatePerfect(run.combo);
-          hud.flashBanner(`PERFECT ×${run.combo}`, 0.6);
-          juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.gate, 22);
-          juice.burst(fpos, 20, 0xffffff, 20);
-          juice.kick(0.5);
-          juice.floatText(fpos, camera, "+120", "#fff");
+          ship.applyBoost((mega ? 0.6 : 0.42) * run.mods.boostPower, 1.6);
+          sfx.gatePerfect(run.combo + (mega ? 4 : 0));
+          hud.flashBanner(mega ? `MEGA PERFECT ×${run.combo}` : `PERFECT ×${run.combo}`, 0.6);
+          juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.gate, mega ? 34 : 22);
+          juice.burst(fpos, mega ? 34 : 20, 0xffffff, 20);
+          juice.kick(mega ? 0.8 : 0.5);
+          juice.floatText(fpos, camera, mega ? "+240 MEGA" : "+120", "#fff");
         } else {
           run.combo = 0;
           run.addScore(40);

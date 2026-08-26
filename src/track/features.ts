@@ -21,6 +21,7 @@ export interface Feature {
   halfW: number;
   mesh: THREE.Object3D;
   taken: boolean;
+  mega?: boolean; // once-per-segment double-reward gate
 }
 
 export interface FeatureEvent {
@@ -144,6 +145,23 @@ function scanlines(): THREE.Texture {
   return scanlineTex;
 }
 
+function megaGateMesh(halfWidth: number, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color });
+  const postGeo = new THREE.CylinderGeometry(0.6, 0.9, 13, 8);
+  for (const side of [-1, 1]) {
+    const post = new THREE.Mesh(postGeo, mat);
+    post.position.set(side * halfWidth, 6.5, 0);
+    g.add(post);
+  }
+  for (const h of [10, 13]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(halfWidth * 2, 0.7, 0.7), mat);
+    beam.position.y = h;
+    g.add(beam);
+  }
+  return g;
+}
+
 function finishArchMesh(halfWidth: number, color: number): THREE.Group {
   const g = new THREE.Group();
   const ring = new THREE.Mesh(
@@ -174,6 +192,7 @@ export class FeatureField {
   private ghostPhases: number[] = [];
   private heroGlow: THREE.MeshBasicMaterial | null = null;
   private arch: THREE.Group | null = null;
+  private tunnelArches: THREE.Mesh[] = [];
 
   constructor(segment: Segment, theme: SectorTheme, opts: FeatureOptions) {
     const rand = mulberry32((segment.seed ^ 0xfeed) >>> 0);
@@ -214,11 +233,18 @@ export class FeatureField {
       return THREE.MathUtils.clamp(turnY * 5, -1, 1) * (halfWidth - 4);
     };
 
-    // gates
+    // gates — one MEGA-GATE at ~70% (double reward, guaranteed pip)
+    const megaS = spline.length * 0.7;
     for (let s = 300; s < spline.length - 250; s += GATE_SPACING) {
+      if (Math.abs(s - megaS) < 80) continue;
       const mesh = gateMesh(halfWidth, theme.gate);
       this.gateMeshes.push(mesh);
       place({ kind: "gate", s, lateral: 0, halfW: halfWidth, mesh, taken: false });
+    }
+    {
+      const mesh = megaGateMesh(halfWidth, theme.gate);
+      this.gateMeshes.push(mesh);
+      place({ kind: "gate", s: megaS, lateral: 0, halfW: halfWidth, mesh, taken: false, mega: true });
     }
 
     // blockers: shard 55% / barrier 30% / fence 15% (fence needs beat confidence)
@@ -341,6 +367,20 @@ export class FeatureField {
       this.ghostPhases.push(ghost.userData.ghostPhase as number);
       deco(ghost, s, (rand() < 0.5 ? -1 : 1) * (170 + rand() * 140));
     }
+    // tunnel sections: arch rings every 18m — flying one on-beat is a drum fill
+    for (const sec of segment.sections) {
+      if (sec.kind !== "tunnel") continue;
+      for (let s = sec.start + 12; s < sec.end - 6; s += 18) {
+        const arch = new THREE.Mesh(
+          new THREE.TorusGeometry(halfWidth * 1.15, 0.22, 6, 28),
+          new THREE.MeshBasicMaterial({ color: theme.edgeLeft, transparent: true, opacity: 0.7 }),
+        );
+        arch.userData.lift = 0;
+        this.tunnelArches.push(arch);
+        deco(arch, s, 0);
+      }
+    }
+
     // hero landmark: one per segment, parked on the horizon at the midpoint
     const hero = heroLandmark(rand, theme);
     hero.userData.lift = 110 + rand() * 60;
@@ -392,6 +432,8 @@ export class FeatureField {
     if (this.heroGlow) {
       this.heroGlow.opacity = 0.3 + energy * 0.4 + beatPulse * 0.12;
     }
+    const archScale = 1 + beatPulse * 0.06;
+    for (const a of this.tunnelArches) a.scale.setScalar(archScale);
   }
 
   /** Sweep [prevS, s]; rings also emit misses (collected: false) to break chains. */
