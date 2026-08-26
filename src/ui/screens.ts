@@ -6,10 +6,22 @@ import { beginAuth, disconnect, getClientId, isConnected, setClientId } from "..
 export function showMenu(
   parent: HTMLElement,
   save: SaveData,
-  onStart: (kind: AudioSourceKind) => Promise<void>,
+  onStart: (kind: AudioSourceKind | "keep") => Promise<void>,
   onHangar: () => void,
+  hasAudio = false,
 ): HTMLDivElement {
   const hasTab = !!navigator.mediaDevices?.getDisplayMedia;
+  const primarySrc = hasAudio ? "keep" : hasTab ? "tab" : "mic";
+  const primaryLabel = hasAudio ? "START RUN" : hasTab ? "SYNC YOUR MUSIC" : "SYNC WITH MIC";
+  const hint = hasAudio
+    ? "music still synced"
+    : hasTab
+      ? "share the tab that’s playing — tick “also share tab audio”"
+      : "hold your phone near the speaker";
+  const alts: string[] = [];
+  if (hasAudio && hasTab) alts.push('<button class="alt" data-src="tab">sync a new tab</button>');
+  if (hasAudio || hasTab) alts.push('<button class="alt" data-src="mic">use microphone</button>');
+  alts.push('<button class="alt" data-src="silent">play without music</button>');
   const el = document.createElement("div");
   el.className = "title-screen";
   el.innerHTML = `
@@ -18,13 +30,12 @@ export function showMenu(
       <p class="tagline">RUNS ON YOUR MUSIC</p>
     </div>
     <div class="title-actions">
-      <button class="sync-btn" data-src="${hasTab ? "tab" : "mic"}">
-        <span>${hasTab ? "SYNC YOUR MUSIC" : "SYNC WITH MIC"}</span>
+      <button class="sync-btn" data-src="${primarySrc}">
+        <span>${primaryLabel}</span>
       </button>
-      <p class="sync-hint">${hasTab ? "share the tab that’s playing — tick “also share tab audio”" : "hold your phone near the speaker"}</p>
+      <p class="sync-hint">${hint}</p>
       <div class="alt-actions">
-        ${hasTab ? '<button class="alt" data-src="mic">use microphone</button><span class="dot">·</span>' : ""}
-        <button class="alt" data-src="silent">play without music</button>
+        ${alts.join('<span class="dot">·</span>')}
       </div>
       <p class="err" role="alert"></p>
     </div>
@@ -88,7 +99,7 @@ export function showMenu(
       err.textContent = "";
       btn.disabled = true;
       try {
-        await onStart(btn.dataset.src as AudioSourceKind);
+        await onStart(btn.dataset.src as AudioSourceKind | "keep");
         el.remove();
       } catch (e) {
         err.textContent = e instanceof Error ? e.message : String(e);

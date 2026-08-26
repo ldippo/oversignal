@@ -7,7 +7,7 @@ const FAMILIES: ModuleFamily[] = ["DASH", "TEMPO", "SALVAGE"];
 /** Ship shop + module shop/loadout. Mutates + persists save directly. */
 export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => void): void {
   const el = document.createElement("div");
-  el.className = "screen hangar";
+  el.className = "hangar-screen";
   parent.appendChild(el);
 
   const loadout = (): string[] => {
@@ -20,11 +20,13 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
     const ship = shipById(save.selectedShip);
     const socketed = loadout();
     el.innerHTML = `
-      <h2>HANGAR</h2>
-      <div class="stat">SCRAP ${save.scrap} · ${ship.name}: ${socketed.length}/${ship.slots} SLOTS</div>
+      <div class="hangar-head">
+        <h2 class="hangar-title">HANGAR</h2>
+        <p class="hangar-sub">◆ ${save.scrap} SCRAP&ensp;·&ensp;${ship.name}&ensp;·&ensp;${socketed.length}/${ship.slots} SLOTS</p>
+      </div>
       <div class="hangar-ships"></div>
       <div class="hangar-modules"></div>
-      <button class="secondary back">BACK</button>
+      <button class="back-btn back"><span>BACK</span></button>
     `;
 
     const shipsBox = el.querySelector(".hangar-ships")!;
@@ -32,7 +34,7 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
       const owned = save.ownedShips.includes(s.id);
       const selected = save.selectedShip === s.id;
       const card = document.createElement("button");
-      card.className = `card ship-card${selected ? " selected" : ""}`;
+      card.className = `ship-card${selected ? " selected" : ""}`;
       card.innerHTML = `
         <span class="card-name" style="color:#${s.accent.toString(16).padStart(6, "0")}">${s.name}</span>
         <span class="card-desc">${s.desc}</span>

@@ -208,13 +208,13 @@ function gameOver(): void {
         <span>◆ ${save.scrap} BANKED</span>
       </div>
       <button class="retry-btn"><span>RETRY</span></button>
-      <button class="alt end-menu">change music</button>
+      <button class="alt end-menu">back to title</button>
     </div>
     <div class="end-footer"></div>
   `;
   ui.appendChild(overlay);
   overlay.querySelector(".retry-btn")!.addEventListener("click", restart);
-  overlay.querySelector(".end-menu")!.addEventListener("click", () => window.location.reload());
+  overlay.querySelector(".end-menu")!.addEventListener("click", returnToTitle);
 }
 
 /** Fresh run with the selected ship's stats + socketed modules applied. */
@@ -475,7 +475,7 @@ function openMenu(): void {
     ui,
     save,
     async (kind) => {
-      await pickAudio(kind);
+      if (kind !== "keep") await pickAudio(kind);
       hud.setVisible(true);
       nowPlaying.startPolling();
       run = newRun();
@@ -483,7 +483,20 @@ function openMenu(): void {
       startSegment();
     },
     () => showHangar(ui, save, openMenu),
+    music.sourceLabel !== "none",
   );
+}
+
+/** Back to the attract-mode title without dropping the audio capture. */
+function returnToTitle(): void {
+  overlay?.remove();
+  overlay = null;
+  state = "menu";
+  hud.setVisible(false);
+  run = newRun();
+  ship.speed = 30;
+  startSegment();
+  openMenu();
 }
 
 hud.setVisible(false);
