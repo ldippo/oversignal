@@ -92,11 +92,12 @@ function barrierMesh(width: number, color: number): THREE.Group {
 }
 
 function fenceMesh(halfWidth: number, color: number): THREE.Mesh {
+  // 75% width: the extreme track edges are a narrow no-timing escape lane
   const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(halfWidth * 2, 5.5),
+    new THREE.PlaneGeometry(halfWidth * 2 * 0.75, 3.2),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
   );
-  m.position.y = 2.75;
+  m.position.y = 1.6;
   return m;
 }
 
@@ -182,11 +183,17 @@ export class FeatureField {
     }
 
     // blockers: shard 55% / barrier 30% / fence 15% (fence needs beat confidence)
+    const blockerS: number[] = [];
+    const fenceS: number[] = [];
+    const nearAny = (s: number, list: number[], minDist: number): boolean =>
+      list.some((o) => Math.abs(o - s) < minDist);
     const blockerCount = 10 + difficulty * 6;
     for (let i = 0; i < blockerCount; i++) {
       const s = 350 + rand() * (spline.length - 600);
       const gatePhase = (s - 300) % GATE_SPACING;
       if (gatePhase < 40 || gatePhase > GATE_SPACING - 40) continue;
+      if (nearAny(s, blockerS, 60)) continue; // no double-hits
+      blockerS.push(s);
       const roll = rand();
       if (roll < 0.55) {
         place({
@@ -207,15 +214,30 @@ export class FeatureField {
       } else {
         const mesh = fenceMesh(halfWidth, theme.obstacle);
         this.fenceMeshes.push(mesh);
-        place({ kind: "fence", s, lateral: 0, halfW: halfWidth, mesh, taken: false });
+        fenceS.push(s);
+        place({ kind: "fence", s, lateral: 0, halfW: halfWidth * 0.75, mesh, taken: false });
       }
     }
 
-    // ring threads on the racing line, beat-spaced
+    // ring threads on the racing line, beat-spaced — kept clear of blockers so
+    // grabbing scrap never forces damage (35m general, 50m from fences)
     const beatDist = THREE.MathUtils.clamp((CRUISE_SPEED * 60) / opts.bpm / 4, 7, 14);
+    const threadSpan = 7 * beatDist;
+    const threadClear = (s0: number): boolean => {
+      for (let j = 0; j < 8; j++) {
+        const s = s0 + j * beatDist;
+        if (nearAny(s, blockerS, 35) || nearAny(s, fenceS, 50)) return false;
+      }
+      return true;
+    };
     const threadCount = 6 + Math.floor(difficulty / 2);
     for (let i = 0; i < threadCount; i++) {
-      const s0 = 320 + rand() * (spline.length - 600);
+      let s0 = -1;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = 320 + rand() * (spline.length - 600 - threadSpan);
+        if (threadClear(candidate)) { s0 = candidate; break; }
+      }
+      if (s0 < 0) continue; // crowded segment — drop the thread rather than overlap
       for (let j = 0; j < 8; j++) {
         const s = s0 + j * beatDist;
         const mesh = ringMesh(theme.scrap);
@@ -310,9 +332,12 @@ export class FeatureField {
       this.nextIdx++;
       if (f.taken || f.s < prevS - 1) continue;
       const dist = Math.abs(lateral - f.lateral);
-      if (f.kind === "gate" || f.kind === "fence") {
-        f.taken = f.kind === "gate"; // fences stay visible/reusable-looking
+      if (f.kind === "gate") {
+        f.taken = true;
         events.push({ kind: f.kind, feature: f, collected: true });
+      } else if (f.kind === "fence") {
+        // edge lane past the membrane = clean dodge, no event either way
+        if (dist < f.halfW) events.push({ kind: "fence", feature: f, collected: true });
       } else if (f.kind === "ring") {
         const hit = dist < f.halfW + magnetRadius;
         f.taken = true;
