@@ -154,6 +154,7 @@ function pauseGame(): void {
   sfx.ensure();
   state = "paused";
   touch?.setVisible(false);
+  hud.setVisible(false);
   pauseOverlay = showPause(ui, save, music, applySettings, {
     title: "PAUSED",
     resumeLabel: "RESUME",
@@ -168,6 +169,7 @@ function pauseGame(): void {
 function resumeGame(): void {
   pauseOverlay = null;
   state = "run";
+  hud.setVisible(true);
   touch?.setVisible(true);
 }
 let currentTheme = themeFor(0);

@@ -690,21 +690,29 @@ body {
   animation: title-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
 
-.hangar-modules {
+.hangar-modules,
+.hangar-ships,
+.draft-cards {
   scrollbar-width: thin;
   scrollbar-color: rgba(78, 243, 255, 0.4) transparent;
 }
 
-.hangar-modules::-webkit-scrollbar {
+.hangar-modules::-webkit-scrollbar,
+.hangar-ships::-webkit-scrollbar,
+.draft-cards::-webkit-scrollbar {
   width: 4px;
 }
 
-.hangar-modules::-webkit-scrollbar-thumb {
+.hangar-modules::-webkit-scrollbar-thumb,
+.hangar-ships::-webkit-scrollbar-thumb,
+.draft-cards::-webkit-scrollbar-thumb {
   background: rgba(78, 243, 255, 0.4);
   border-radius: 2px;
 }
 
-.hangar-modules::-webkit-scrollbar-track {
+.hangar-modules::-webkit-scrollbar-track,
+.hangar-ships::-webkit-scrollbar-track,
+.draft-cards::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -847,10 +855,12 @@ body {
 
 .wordmark {
   font-family: var(--display-font);
-  font-size: clamp(3rem, 9vw, 5.5rem);
+  /* 10-char wordmark: min must stay fluid or it overflows narrow phones */
+  font-size: clamp(1.6rem, 7.4vw, 5.5rem);
   font-weight: 400;
   letter-spacing: 0.22em;
   margin-right: -0.22em; /* recenter tracked text */
+  white-space: nowrap;
   color: #fff;
   text-shadow:
     0 0 12px rgba(78, 243, 255, 0.9),
@@ -1448,6 +1458,8 @@ body {
 
 .setting-slider {
   appearance: none;
+  min-width: 0; /* range inputs have a ~129px intrinsic min that breaks narrow grids */
+  width: 100%;
   height: 4px;
   background: rgba(78, 243, 255, 0.25);
   border-radius: 2px;
@@ -1519,13 +1531,15 @@ body {
   .screen p { font-size: 14px; max-width: 88vw; }
   .screen .cards { flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
   .screen .card { width: 82vw; padding: 12px 14px; }
-  .hangar-ships { gap: 8px; max-height: 30vh; overflow-y: auto; }
-  .hangar-ships .ship-card { width: 44vw; padding: 10px; }
+  .hangar-screen { padding: 4vh 12px 3vh; gap: 12px; }
+  .hangar-ships { gap: 8px; max-height: 32vh; overflow-y: auto; }
+  .hangar-ships .ship-card { width: calc(50% - 6px); padding: 10px; }
   .meta-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 12px; }
   .now-playing { max-width: 250px; bottom: 12px; }
   .sp-row input { width: 60vw; }
   .title-block { margin-top: 11vh; }
-  .tagline { font-size: 11px; }
+  .wordmark { letter-spacing: 0.14em; margin-right: -0.14em; }
+  .tagline { font-size: 11px; letter-spacing: 0.3em; margin-right: -0.3em; }
   .sync-btn { font-size: 16px; padding: 16px 34px; }
   .sync-hint { max-width: 80vw; text-align: center; }
   .title-footer { flex-wrap: wrap; gap: 10px 16px; padding: 12px 18px 16px; justify-content: center; }
@@ -1538,4 +1552,41 @@ body {
   .retry-btn { font-size: 16px; padding: 16px 44px; }
   .draft-cards { flex-direction: column; gap: 10px; margin-bottom: 6vh; max-height: 56vh; overflow-y: auto; }
   .draft-card { width: 84vw; padding: 14px 16px; }
+  .draft-title { font-size: 5.6vw; letter-spacing: 0.12em; margin-right: -0.12em; }
+  .end-title { font-size: 7vw; letter-spacing: 0.14em; margin-right: -0.14em; }
+  .hangar-title { font-size: 6.4vw; }
+  .pause-title { font-size: 7vw; }
+  .setting-row { grid-template-columns: 104px 1fr 64px; gap: 8px; padding: 10px 12px; }
+  .setting-name { font-size: 11.5px; }
+  .setting-note { font-size: 11px; }
+  .setting-val { font-size: 11px; }
+  .settings-rows { width: 96vw; }
+  .pause-screen { padding-top: 7vh; gap: 14px; }
+}
+
+/* ---------- Short viewports (landscape phones) ---------- */
+
+@media (max-height: 500px) {
+  .title-block { margin-top: 3vh; }
+  .wordmark { font-size: min(7.4vw, 9vh); }
+  .sync-hint, .daily-hint { display: none; }
+  .title-actions { gap: 8px; }
+  .sync-btn { font-size: 15px; padding: 12px 34px; }
+  .daily-btn { margin-top: 4px; padding: 9px 20px; font-size: 12px; }
+  .title-footer { padding: 8px 18px 10px; gap: 14px; }
+  .pause-screen { padding-top: 3vh; gap: 10px; overflow-y: auto; }
+  .pause-title { font-size: 6vh; }
+  .settings-rows { gap: 5px; }
+  .setting-row { padding: 7px 12px; }
+  .pause-screen .resume-btn { padding: 12px 40px; font-size: 15px; }
+  .hangar-screen { overflow-y: auto; justify-content: flex-start; padding: 3vh 16px; gap: 10px; }
+  .hangar-ships { max-height: none; overflow-y: visible; }
+  .hangar-modules { max-height: none; overflow-y: visible; }
+  .end-block { margin-top: 5vh; }
+  .end-actions { margin-bottom: 3vh; gap: 8px; }
+  .end-payout { font-size: 24px; }
+  .retry-btn { padding: 12px 44px; font-size: 15px; }
+  .draft-block { margin-top: 4vh; }
+  .draft-cards { margin-bottom: 4vh; }
+  .draft-card { padding: 12px 14px; gap: 6px; }
 }
