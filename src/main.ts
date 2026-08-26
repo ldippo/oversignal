@@ -262,6 +262,10 @@ const loop = new GameLoop(
       : false;
 
     const input = readInput();
+    if (input.dash && !ship.dashing && run.dashPips >= 1) {
+      run.dashPips -= 1;
+      ship.dash();
+    }
     const prevS = ship.s;
     const speedScale = 0.85 + music.energy * 0.4 + (music.dropActive ? 0.35 : 0);
     ship.update(dt, input, speedScale);
@@ -275,6 +279,7 @@ const loop = new GameLoop(
           run.bestCombo = Math.max(run.bestCombo, run.combo);
           run.addScore(120);
           run.heal(run.mods.hullRegenOnBeat);
+          run.earnPip(1);
           ship.applyBoost(0.42 * run.mods.boostPower, 1.6);
           hud.flashBanner(`PERFECT ×${run.combo}`, 0.6);
         } else {
@@ -283,13 +288,17 @@ const loop = new GameLoop(
           ship.applyBoost(0.16 * run.mods.boostPower, 0.8);
         }
       } else if (ev.kind === "shard" || ev.kind === "barrier") {
-        if (!music.dropActive) {
+        if (ship.dashing) {
+          // shatter: dashing converts hazards into score
+          run.addScore(150);
+          hud.flashBanner("SHATTER", 0.4);
+        } else if (!music.dropActive) {
           run.damage(18);
           ship.speed *= 0.6;
           run.combo = 0;
         }
       } else if (ev.kind === "fence") {
-        if (fenceOpenNow || music.dropActive) {
+        if (fenceOpenNow || music.dropActive || ship.dashing) {
           run.addScore(60);
         } else {
           run.damage(14);
@@ -304,6 +313,7 @@ const loop = new GameLoop(
           if (ringChain % 5 === 0) {
             run.addScrap(15);
             run.addScore(100);
+            run.earnPip(1);
             hud.flashBanner(`CHAIN ${ringChain}`, 0.5);
           }
         } else {

@@ -9,7 +9,6 @@ export interface ShipStats {
   brakeDecel: number;
   coastDecel: number;
   lateralSpeed: number; // max sideways m/s at full steer
-  boostMult: number;
 }
 
 export const BASE_STATS: ShipStats = {
@@ -18,8 +17,9 @@ export const BASE_STATS: ShipStats = {
   brakeDecel: 90,
   coastDecel: 18,
   lateralSpeed: 26,
-  boostMult: 1.45,
 };
+
+const DASH_DURATION = 0.5;
 
 const HOVER_HEIGHT = 1.1;
 
@@ -85,7 +85,8 @@ export class Ship {
   s = 0; // distance along track
   lateral = 0;
   speed = 0;
-  boosting = false;
+  dashing = false;
+  private dashTimer = 0;
   private boostTimer = 0;
   private boostExtra = 0;
 
@@ -134,16 +135,32 @@ export class Ship {
     return this.wallContact;
   }
 
+  /** Consume-side of a dash pip: 0.5s surge, i-frames, damped steering. */
+  dash(surgeMult = 1): void {
+    this.dashTimer = DASH_DURATION * surgeMult;
+    this.dashing = true;
+    this.speed += 32 * surgeMult;
+  }
+
+  /** 0..1 progress through the current dash (for fx). */
+  get dashProgress(): number {
+    return this.dashing ? 1 - this.dashTimer / DASH_DURATION : 0;
+  }
+
   update(dt: number, input: InputState, speedScale = 1): void {
     this.time += dt;
     const st = this.stats;
-    this.boosting = input.boost;
+
+    if (this.dashTimer > 0) {
+      this.dashTimer -= dt;
+      this.dashing = this.dashTimer > 0;
+    }
 
     if (this.boostTimer > 0) this.boostTimer -= dt;
     const impulse = this.boostTimer > 0 ? 1 + this.boostExtra : 1;
-    const effMax = st.maxSpeed * speedScale * (this.boosting ? st.boostMult : 1) * impulse;
-    if (input.accel || this.boosting) {
-      this.speed += st.accel * (this.boosting ? 1.6 : 1) * dt;
+    const effMax = st.maxSpeed * speedScale * (this.dashing ? 1.6 : 1) * impulse;
+    if (input.accel || this.dashing) {
+      this.speed += st.accel * (this.dashing ? 1.8 : 1) * dt;
     } else if (input.brake) {
       this.speed -= st.brakeDecel * dt;
     } else {
@@ -156,8 +173,9 @@ export class Ship {
 
     this.s += this.speed * dt;
 
-    // steering scales with forward speed so a stopped ship doesn't strafe
-    const steerAuthority = Math.min(1, this.speed / 30);
+    // steering scales with forward speed so a stopped ship doesn't strafe;
+    // dashes commit — steering authority halves mid-dash
+    const steerAuthority = Math.min(1, this.speed / 30) * (this.dashing ? 0.5 : 1);
     this.lateral += input.steer * st.lateralSpeed * steerAuthority * dt;
 
     const limit = this.trackHalfWidth - 1.6;
@@ -181,6 +199,9 @@ export class Ship {
   private pose(): void {
     const f = this.spline.frameAt(this.s, this.frame);
     const hover = HOVER_HEIGHT + Math.sin(this.time * 5.2) * 0.07;
+    // light-streak stretch during dash
+    const stretch = this.dashing ? 1 + Math.sin(this.dashProgress * Math.PI) * 0.9 : 1;
+    this.object.scale.set(1, 1, stretch);
 
     this.object.position
       .copy(f.position)

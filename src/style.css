@@ -84,6 +84,29 @@ body {
   background: linear-gradient(90deg, #ff3e3e, #ff9a3e);
 }
 
+.hud-pips {
+  position: absolute;
+  bottom: 54px;
+  left: 36px;
+  display: flex;
+  gap: 6px;
+}
+
+.dash-pip {
+  width: 22px;
+  height: 10px;
+  transform: skewX(-18deg);
+  background: rgba(78, 243, 255, 0.12);
+  border: 1px solid rgba(78, 243, 255, 0.45);
+  border-radius: 2px;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+
+.dash-pip.filled {
+  background: var(--hud-cyan);
+  box-shadow: 0 0 10px rgba(78, 243, 255, 0.8);
+}
+
 .hud-seg {
   position: absolute;
   top: 22px;

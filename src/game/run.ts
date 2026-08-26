@@ -7,6 +7,7 @@ export interface RunModifiers {
   shieldPerSegment: number;
   scrapMult: number;
   hullRegenOnBeat: number; // hull per on-beat gate hit
+  maxPips: number; // dash charges
 }
 
 export const BASE_MODIFIERS: RunModifiers = {
@@ -18,6 +19,7 @@ export const BASE_MODIFIERS: RunModifiers = {
   shieldPerSegment: 0,
   scrapMult: 1,
   hullRegenOnBeat: 0,
+  maxPips: 3,
 };
 
 export class Run {
@@ -30,6 +32,7 @@ export class Run {
   bestCombo = 0;
   distance = 0;
   shields = 0;
+  dashPips = 3; // start full so the first dash teaches itself
   mods: RunModifiers = { ...BASE_MODIFIERS };
   over = false;
 
@@ -53,6 +56,10 @@ export class Run {
       this.hull = 0;
       this.over = true;
     }
+  }
+
+  earnPip(amount = 1): void {
+    this.dashPips = Math.min(this.mods.maxPips, this.dashPips + amount);
   }
 
   heal(amount: number): void {
