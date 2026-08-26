@@ -8,6 +8,8 @@ import { PostFx } from "./fx/post";
 import { themeFor } from "./fx/palette";
 import { Environment } from "./fx/environment";
 import { WarpTunnel } from "./fx/warp";
+import { Juice } from "./fx/juice";
+import { ShipTrails } from "./fx/trail";
 import { Ship } from "./ship/ship";
 import { loadSave, bankRun } from "./core/save";
 import { draftUpgrades } from "./game/upgrades";
@@ -98,6 +100,9 @@ const hud = new Hud(ui);
 const music = new MusicState();
 const audioDebug = new AudioDebug(ui);
 const nowPlaying = new NowPlayingHud(ui);
+const juice = new Juice(scene, ui);
+const trails = new ShipTrails(scene, 0x4ef3ff);
+let currentTheme = themeFor(0);
 let overlay: HTMLDivElement | null = null;
 
 async function pickAudio(kind: AudioSourceKind): Promise<void> {
@@ -109,6 +114,7 @@ function startSegment(): void {
   if (trackGroup) disposeGroup(trackGroup);
   if (features) disposeGroup(features.group);
   const theme = themeFor(run.segmentIndex);
+  currentTheme = theme;
   segment = generateSegment({ seed: run.segmentSeed(), difficulty: run.segmentIndex });
   trackGroup = buildTrackMesh(segment.spline, {
     halfWidth: segment.halfWidth,
@@ -124,6 +130,8 @@ function startSegment(): void {
   scene.fog = new THREE.Fog(theme.fog, 60, 650);
   scene.background = new THREE.Color(theme.background);
   environment.setTheme(theme);
+  juice.setRails(trackGroup);
+  trails.setColor(ship.def.accent);
   ringChain = 0;
   ship.setSpline(segment.spline, segment.halfWidth);
   ship.s = 0;
@@ -147,6 +155,8 @@ function finishSegment(): void {
   state = "warp";
   flash();
   hud.flashBanner("SECTOR CLEAR", 1.5);
+  juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 40);
+  juice.kick(1);
   // old world drops away; the warp tunnel hides the rebuild
   if (trackGroup) { disposeGroup(trackGroup); trackGroup = null; }
   if (features) { disposeGroup(features.group); features = null; }
@@ -231,8 +241,9 @@ function updateCamera(dt: number): void {
   camTarget.copy(ship.object.position).addScaledVector(camFrame.tangent, 14);
   camera.up.copy(camFrame.up);
   camera.lookAt(camTarget);
-  // bass rumble
-  const shake = music.bass * 0.22 + (music.dropActive ? 0.2 : 0);
+  // bass rumble + event shake + hit kick
+  camera.position.addScaledVector(camFrame.tangent, -juice.camKick);
+  const shake = music.bass * 0.22 + (music.dropActive ? 0.2 : 0) + juice.shake * 0.5;
   camera.position.x += (Math.random() - 0.5) * shake;
   camera.position.y += (Math.random() - 0.5) * shake;
   stars.position.copy(ship.object.position);
@@ -247,6 +258,7 @@ const loop = new GameLoop(
     if (state === "warp") {
       elapsed += dt;
       music.update(dt);
+      juice.update(dt);
       warp?.update(dt, music);
       return;
     }
@@ -254,7 +266,13 @@ const loop = new GameLoop(
     elapsed += dt;
     music.update(dt);
 
-    if (music.dropActive && !wasDropActive) hud.flashBanner("OVERDRIVE", 2.5);
+    juice.update(dt);
+    if (music.dropActive && !wasDropActive) {
+      hud.flashBanner("OVERDRIVE", 2.5);
+      juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 30);
+      juice.strobeRails();
+      juice.kick(0.8);
+    }
     wasDropActive = music.dropActive;
 
     fenceOpenNow = features.hasFences
@@ -265,6 +283,8 @@ const loop = new GameLoop(
     if (input.dash && !ship.dashing && run.dashPips >= 1) {
       run.dashPips -= 1;
       ship.dash();
+      juice.kick(0.6);
+      juice.burst(ship.object.position, 16, ship.def.accent, 18);
     }
     const prevS = ship.s;
     const speedScale = 0.85 + music.energy * 0.4 + (music.dropActive ? 0.35 : 0);
@@ -273,6 +293,7 @@ const loop = new GameLoop(
     run.addScore((ship.s - prevS) * 0.15);
 
     for (const ev of features.check(prevS, ship.s, ship.lateral, run.mods.magnetRadius)) {
+      const fpos = ev.feature.mesh.position;
       if (ev.kind === "gate") {
         if (music.onBeat(run.mods.rhythmWindow)) {
           run.combo++;
@@ -282,39 +303,62 @@ const loop = new GameLoop(
           run.earnPip(1);
           ship.applyBoost(0.42 * run.mods.boostPower, 1.6);
           hud.flashBanner(`PERFECT ×${run.combo}`, 0.6);
+          juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.gate, 22);
+          juice.burst(fpos, 20, 0xffffff, 20);
+          juice.kick(0.5);
+          juice.floatText(fpos, camera, "+120", "#fff");
         } else {
           run.combo = 0;
           run.addScore(40);
           ship.applyBoost(0.16 * run.mods.boostPower, 0.8);
+          juice.kick(0.2);
+          juice.floatText(fpos, camera, "+40");
         }
       } else if (ev.kind === "shard" || ev.kind === "barrier") {
         if (ship.dashing) {
-          // shatter: dashing converts hazards into score
           run.addScore(150);
           hud.flashBanner("SHATTER", 0.4);
+          juice.burst(fpos, 26, currentTheme.obstacle, 26);
+          juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.obstacle, 14);
+          juice.kick(0.4);
+          loop.freeze(0.04);
+          juice.floatText(fpos, camera, "+150 SHATTER", "#ffc44e");
         } else if (!music.dropActive) {
           run.damage(18);
           ship.speed *= 0.6;
           run.combo = 0;
+          juice.burst(ship.object.position, 18, 0xff4030, 16);
+          juice.damageFlash();
+          juice.rumble(0.8);
+          loop.freeze(0.06);
+          juice.floatText(ship.object.position, camera, "-18", "#ff5a5a");
         }
       } else if (ev.kind === "fence") {
         if (fenceOpenNow || music.dropActive || ship.dashing) {
           run.addScore(60);
+          juice.burst(fpos, 10, currentTheme.obstacle, 10);
+          juice.floatText(fpos, camera, "+60");
         } else {
           run.damage(14);
           ship.speed *= 0.7;
           run.combo = 0;
+          juice.damageFlash();
+          juice.rumble(0.6);
+          juice.floatText(ship.object.position, camera, "-14", "#ff5a5a");
         }
       } else if (ev.kind === "ring") {
         if (ev.collected) {
           ringChain++;
           run.addScrap(5);
           run.addScore(25);
+          juice.burst(fpos, 8, currentTheme.scrap, 10);
           if (ringChain % 5 === 0) {
             run.addScrap(15);
             run.addScore(100);
             run.earnPip(1);
             hud.flashBanner(`CHAIN ${ringChain}`, 0.5);
+            juice.strobeRails();
+            juice.floatText(fpos, camera, `CHAIN ${ringChain} +100`, "#ffc44e");
           }
         } else {
           ringChain = 0;
@@ -325,6 +369,10 @@ const loop = new GameLoop(
     if (ship.hitWall) {
       run.damage(WALL_DPS * (0.3 + (ship.speed / ship.stats.maxSpeed) * 0.7) * dt);
       run.combo = 0;
+      if (Math.random() < dt * 40) {
+        juice.burst(ship.object.position, 2, 0xffaa55, 9);
+      }
+      juice.rumble(dt * 3);
     }
     if (run.over) {
       gameOver();
@@ -338,7 +386,12 @@ const loop = new GameLoop(
   (_, ) => {
     environment.update(music, ship.object.position);
     features?.animate(music.beatPulse, elapsed, fenceOpenNow);
-    const targetFov = 72 + music.energy * 8 + music.beatPulse * 2 + (music.dropActive ? 6 : 0);
+    trails.update(
+      ship.object,
+      ship.speed / ship.stats.maxSpeed,
+      ship.dashing || music.dropActive,
+    );
+    const targetFov = 72 + music.energy * 8 + music.beatPulse * 2 + (music.dropActive ? 6 : 0) + juice.fovKick;
     if (Math.abs(camera.fov - targetFov) > 0.05) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();

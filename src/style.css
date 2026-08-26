@@ -221,6 +221,39 @@ body {
   background: #1db954; /* Spotify green */
 }
 
+.float-text {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px currentColor;
+  animation: float-up 0.8s ease-out forwards;
+  white-space: nowrap;
+}
+
+@keyframes float-up {
+  0% { opacity: 0; margin-top: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; margin-top: -56px; }
+}
+
+.damage-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(255, 30, 40, 0.55) 100%);
+  mix-blend-mode: screen;
+  animation: vignette-glitch 0.35s steps(6) forwards;
+}
+
+@keyframes vignette-glitch {
+  0% { opacity: 1; transform: translateX(0); }
+  30% { transform: translateX(-6px); }
+  60% { transform: translateX(4px); }
+  100% { opacity: 0; transform: translateX(0); }
+}
+
 .flash {
   position: absolute;
   inset: 0;

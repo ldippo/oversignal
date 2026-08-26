@@ -9,6 +9,12 @@ export class GameLoop {
   private acc = 0;
   private rafId = 0;
   private running = false;
+  private freezeTimer = 0;
+
+  /** Hitstop: pause simulation (rendering continues) for `seconds`. */
+  freeze(seconds: number): void {
+    this.freezeTimer = Math.max(this.freezeTimer, seconds);
+  }
 
   constructor(
     private update: UpdateFn,
@@ -24,10 +30,15 @@ export class GameLoop {
       let frame = (now - this.last) / 1000;
       if (frame > MAX_FRAME) frame = MAX_FRAME;
       this.last = now;
-      this.acc += frame;
-      while (this.acc >= STEP) {
-        this.update(STEP);
-        this.acc -= STEP;
+      if (this.freezeTimer > 0) {
+        this.freezeTimer -= frame;
+        this.acc = 0;
+      } else {
+        this.acc += frame;
+        while (this.acc >= STEP) {
+          this.update(STEP);
+          this.acc -= STEP;
+        }
       }
       this.render(this.acc / STEP);
       this.rafId = requestAnimationFrame(tick);
