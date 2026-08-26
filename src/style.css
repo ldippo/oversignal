@@ -198,6 +198,19 @@ body {
   background: #1db954; /* Spotify green */
 }
 
+.flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(78, 243, 255, 0.4));
+  animation: flash-out 0.45s ease-out forwards;
+}
+
+@keyframes flash-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* ---------- Screens ---------- */
 
 .screen {

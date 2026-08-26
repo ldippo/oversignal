@@ -6,6 +6,8 @@ import { generateSegment, type Segment } from "./track/generator";
 import { FeatureField } from "./track/features";
 import { PostFx } from "./fx/post";
 import { themeFor } from "./fx/palette";
+import { Environment } from "./fx/environment";
+import { WarpTunnel } from "./fx/warp";
 import { Ship, BASE_STATS } from "./ship/ship";
 import { loadSave, bankRun } from "./core/save";
 import { draftUpgrades } from "./game/upgrades";
@@ -47,6 +49,8 @@ const sun = new THREE.DirectionalLight(0x88aaff, 1.8);
 sun.position.set(200, 400, 100);
 scene.add(sun);
 
+const environment = new Environment(scene);
+
 // starfield (follows ship so the sky never runs out)
 const stars = (() => {
   const N = 3000;
@@ -69,7 +73,7 @@ const stars = (() => {
 
 // ---------- game state ----------
 
-type GameState = "menu" | "run" | "upgrade" | "gameover";
+type GameState = "menu" | "run" | "warp" | "gameover";
 let state: GameState = "menu";
 const save = loadSave();
 
@@ -77,8 +81,11 @@ let run = new Run((Math.random() * 0xffffffff) >>> 0);
 let segment: Segment | null = null;
 let trackGroup: THREE.Group | null = null;
 let features: FeatureField | null = null;
+let warp: WarpTunnel | null = null;
 let elapsed = 0;
 let wasDropActive = false;
+let fenceOpenNow = false;
+let ringChain = 0;
 
 const ship = new Ship(generateSegment({ seed: 1, difficulty: 0 }).spline, 14);
 scene.add(ship.object);
@@ -107,10 +114,15 @@ function startSegment(): void {
     edgeColorRight: theme.edgeRight,
   });
   scene.add(trackGroup);
-  features = new FeatureField(segment, theme);
+  features = new FeatureField(segment, theme, {
+    beatConfidence: music.beatConfidence,
+    bpm: music.bpm,
+  });
   scene.add(features.group);
-  scene.fog = new THREE.Fog(theme.fog, 60, 520);
+  scene.fog = new THREE.Fog(theme.fog, 60, 650);
   scene.background = new THREE.Color(theme.background);
+  environment.setTheme(theme);
+  ringChain = 0;
   ship.setSpline(segment.spline, segment.halfWidth);
   ship.s = 0;
   ship.lateral = 0;
@@ -120,12 +132,28 @@ function startSegment(): void {
   hud.flashBanner(`SECTOR ${run.segmentIndex + 1}`, 2);
 }
 
+function flash(): void {
+  const el = document.createElement("div");
+  el.className = "flash";
+  ui.appendChild(el);
+  el.addEventListener("animationend", () => el.remove());
+}
+
 function finishSegment(): void {
   run.segmentIndex++;
   run.addScore(500);
-  state = "upgrade";
+  state = "warp";
+  flash();
+  hud.flashBanner("SECTOR CLEAR", 1.5);
+  // old world drops away; the warp tunnel hides the rebuild
+  if (trackGroup) { disposeGroup(trackGroup); trackGroup = null; }
+  if (features) { disposeGroup(features.group); features = null; }
+  warp = new WarpTunnel(scene, ship.object, themeFor(run.segmentIndex - 1));
   showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(3), (u) => {
     u.apply(run, ship);
+    warp?.dispose();
+    warp = null;
+    flash();
     state = "run";
     startSegment();
   });
@@ -200,12 +228,22 @@ const WALL_DPS = 16;
 
 const loop = new GameLoop(
   (dt) => {
+    if (state === "warp") {
+      elapsed += dt;
+      music.update(dt);
+      warp?.update(dt, music);
+      return;
+    }
     if (state !== "run" || !segment || !features) return;
     elapsed += dt;
     music.update(dt);
 
     if (music.dropActive && !wasDropActive) hud.flashBanner("OVERDRIVE", 2.5);
     wasDropActive = music.dropActive;
+
+    fenceOpenNow = features.hasFences
+      ? music.onBeat(features.fenceWindowFrac * 0.5 * (60 / music.bpm))
+      : false;
 
     const input = readInput();
     const prevS = ship.s;
@@ -228,15 +266,33 @@ const loop = new GameLoop(
           run.addScore(40);
           ship.applyBoost(0.16 * run.mods.boostPower, 0.8);
         }
-      } else if (ev.kind === "obstacle") {
+      } else if (ev.kind === "shard" || ev.kind === "barrier") {
         if (!music.dropActive) {
           run.damage(18);
           ship.speed *= 0.6;
           run.combo = 0;
         }
-      } else if (ev.kind === "scrap") {
-        run.addScrap(5);
-        run.addScore(25);
+      } else if (ev.kind === "fence") {
+        if (fenceOpenNow || music.dropActive) {
+          run.addScore(60);
+        } else {
+          run.damage(14);
+          ship.speed *= 0.7;
+          run.combo = 0;
+        }
+      } else if (ev.kind === "ring") {
+        if (ev.collected) {
+          ringChain++;
+          run.addScrap(5);
+          run.addScore(25);
+          if (ringChain % 5 === 0) {
+            run.addScrap(15);
+            run.addScore(100);
+            hud.flashBanner(`CHAIN ${ringChain}`, 0.5);
+          }
+        } else {
+          ringChain = 0;
+        }
       }
     }
 
@@ -248,13 +304,14 @@ const loop = new GameLoop(
       gameOver();
       return;
     }
-    if (ship.s >= segment.spline.length - 2) {
+    if (ship.s >= segment.spline.length - 30) {
       finishSegment();
     }
     updateCamera(dt);
   },
   (_, ) => {
-    features?.animate(music.beatPulse, elapsed);
+    environment.update(music, ship.object.position);
+    features?.animate(music.beatPulse, elapsed, fenceOpenNow);
     const targetFov = 72 + music.energy * 8 + music.beatPulse * 2 + (music.dropActive ? 6 : 0);
     if (Math.abs(camera.fov - targetFov) > 0.05) {
       camera.fov = targetFov;
@@ -288,6 +345,7 @@ Object.assign(window as unknown as Record<string, unknown>, {
     get state() { return state; },
     get run() { return run; },
     get ship() { return ship; },
+    get features() { return features; },
     music,
   },
 });

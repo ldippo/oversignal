@@ -33,6 +33,9 @@ export class MusicState {
     this.capture = capture;
     this.analyser = capture?.analyser ? new SpectrumAnalyser(capture.analyser) : null;
     this.beats = new BeatTracker();
+    // silent mode's clock is perfect from frame zero; live audio must earn confidence
+    this.beatConfidence = this.analyser ? 0 : 1;
+    if (!this.analyser) this.bpm = 120;
   }
 
   get sourceLabel(): string {
