@@ -33,14 +33,19 @@ export class SpectrumAnalyser {
     this.high = this.bandAvg(2000, 8000);
     this.level = this.bandAvg(20, 8000);
 
-    // spectral flux over the rhythmically informative range
+    // spectral flux over the rhythmically informative range; bass doubled —
+    // kicks and snares carry the beat, melody/vocal bins mostly carry noise
     const lo = Math.floor(20 / this.binHz);
-    const hi = Math.min(this.freq.length - 1, Math.ceil(4000 / this.binHz));
+    const bassHi = Math.ceil(250 / this.binHz);
+    const hi = Math.min(this.freq.length - 1, Math.ceil(2500 / this.binHz));
     let flux = 0;
+    let weightSum = 0;
     for (let i = lo; i <= hi; i++) {
+      const w = i <= bassHi ? 2 : 1;
+      weightSum += w;
       const d = this.freq[i] - this.prevFreq[i];
-      if (d > 0) flux += d;
+      if (d > 0) flux += d * w;
     }
-    this.flux = flux / ((hi - lo + 1) * 255);
+    this.flux = flux / (weightSum * 255);
   }
 }

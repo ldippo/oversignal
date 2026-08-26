@@ -54,7 +54,9 @@ export class MusicState {
     if (!this.analyser || !this.capture?.ctx) return;
     const now = this.capture.ctx.currentTime;
     const audioDt = now - this.lastAudio;
-    if (audioDt < 0.01) return;
+    // uniform ~20-25ms cadence: flux amplitude is dt-dependent, so irregular
+    // sampling from the dual timer/frame drivers would blur onset peaks
+    if (audioDt < 0.02) return;
     this.lastAudio = now;
     this.audioNow = now;
     const sdt = Math.min(audioDt, 0.1);
@@ -90,6 +92,11 @@ export class MusicState {
   /** Raw flux for the debug overlay. */
   get debugFlux(): number {
     return this.analyser?.flux ?? 0;
+  }
+
+  /** Total detected onsets (debug/verification). */
+  get debugOnsets(): number {
+    return this.beats.onsets;
   }
 
   update(dt: number): void {

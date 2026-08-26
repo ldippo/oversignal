@@ -12,7 +12,9 @@ function wire(ctx: AudioContext, stream: MediaStream): AnalyserNode {
   const src = ctx.createMediaStreamSource(stream);
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.0;
+  // time-average the spectrum: at our ~25ms read cadence, raw instantaneous
+  // FFTs of real music are noise — flux only means "onset" over a smoothed base
+  analyser.smoothingTimeConstant = 0.5;
   src.connect(analyser);
   // deliberately NOT connected to destination: tab audio already plays in its own tab
   return analyser;
