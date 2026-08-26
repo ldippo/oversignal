@@ -1,0 +1,248 @@
+:root {
+  --hud-cyan: #4ef3ff;
+  --hud-magenta: #ff3ec8;
+  --hud-amber: #ffc44e;
+  --hud-bg: rgba(4, 8, 20, 0.72);
+  --hud-font: "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #030308;
+  font-family: var(--hud-font);
+  color: #e8f6ff;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+/* ---------- HUD ---------- */
+
+.hud-speed {
+  position: absolute;
+  bottom: 26px;
+  right: 36px;
+  font-size: 52px;
+  font-weight: 800;
+  color: var(--hud-cyan);
+  text-shadow: 0 0 14px rgba(78, 243, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-speed::after {
+  content: " km/h";
+  font-size: 18px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.hud-hull {
+  position: absolute;
+  bottom: 32px;
+  left: 36px;
+  width: 260px;
+  height: 14px;
+  border: 1px solid rgba(78, 243, 255, 0.5);
+  border-radius: 3px;
+  background: rgba(10, 20, 40, 0.6);
+  overflow: hidden;
+}
+
+.hud-hull-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #2fd8a8, #4ef3ff);
+  transform-origin: left;
+  transition: transform 0.15s ease-out;
+}
+
+.hud-hull-fill.low {
+  background: linear-gradient(90deg, #ff3e3e, #ff9a3e);
+}
+
+.hud-seg {
+  position: absolute;
+  top: 22px;
+  left: 36px;
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: rgba(232, 246, 255, 0.85);
+}
+
+.hud-score {
+  position: absolute;
+  top: 22px;
+  right: 36px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--hud-amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-combo {
+  position: absolute;
+  bottom: 90px;
+  right: 40px;
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--hud-magenta);
+  text-shadow: 0 0 12px rgba(255, 62, 200, 0.6);
+}
+
+.hud-banner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(78, 243, 255, 0.9);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+}
+
+.hud-banner.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ---------- Screens ---------- */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(3, 5, 14, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.screen h1 {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 10px;
+  color: var(--hud-cyan);
+  text-shadow: 0 0 30px rgba(78, 243, 255, 0.7);
+}
+
+.screen h2 {
+  font-size: 30px;
+  letter-spacing: 6px;
+  color: var(--hud-magenta);
+}
+
+.screen p {
+  font-size: 17px;
+  color: rgba(232, 246, 255, 0.8);
+  max-width: 520px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.screen .stat {
+  font-size: 20px;
+  color: var(--hud-amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.screen button {
+  pointer-events: auto;
+  font-family: var(--hud-font);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding: 14px 38px;
+  color: #04101c;
+  background: var(--hud-cyan);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(78, 243, 255, 0.5);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.screen button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 26px rgba(78, 243, 255, 0.8);
+}
+
+.screen .cards {
+  display: flex;
+  gap: 20px;
+}
+
+.screen .card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 220px;
+  padding: 22px 20px;
+  text-align: left;
+  letter-spacing: 1px;
+  color: #e8f6ff;
+  background: rgba(10, 20, 44, 0.85);
+  border: 1px solid rgba(78, 243, 255, 0.4);
+  box-shadow: none;
+}
+
+.screen .card:hover {
+  border-color: var(--hud-cyan);
+  box-shadow: 0 0 22px rgba(78, 243, 255, 0.4);
+}
+
+.card-key {
+  font-size: 13px;
+  color: var(--hud-magenta);
+}
+
+.card-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--hud-cyan);
+}
+
+.card-desc {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.screen button.secondary {
+  background: transparent;
+  color: var(--hud-cyan);
+  border: 1px solid var(--hud-cyan);
+  box-shadow: none;
+}

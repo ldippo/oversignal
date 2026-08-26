@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vercel/
+.playwright-mcp/
+.impeccable/
+.transcend/
+*.local
+.DS_Store
