@@ -27,8 +27,8 @@ export function playedToday(save: SaveData): boolean {
 
 export function shareText(daily: DailyResult): string {
   return [
-    `FZERO DAILY ${daily.date}`,
+    `OVERSIGNAL DAILY ${daily.date}`,
     `SCORE ${daily.score.toLocaleString()} · SECTOR ${daily.sector} · COMBO ×${daily.bestCombo}`,
-    "https://fzero-delta.vercel.app",
+    "https://oversignal.vercel.app",
   ].join("\n");
 }

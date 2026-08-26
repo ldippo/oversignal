@@ -1,4 +1,4 @@
-# FZERO — Art Direction Plan v1
+# OVERSIGNAL — Art Direction Plan v1
 
 Decisions locked 2026-08-26 (grill session). Neon aesthetic, Beat Saber-adjacent
 readability: every track object has one job and one read at 400 km/h.

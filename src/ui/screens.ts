@@ -29,7 +29,7 @@ export function showMenu(
   el.className = "title-screen";
   el.innerHTML = `
     <div class="title-block">
-      <h1 class="wordmark">FZERO</h1>
+      <h1 class="wordmark">OVERSIGNAL</h1>
       <p class="tagline">RUNS ON YOUR MUSIC</p>
     </div>
     <div class="title-actions">

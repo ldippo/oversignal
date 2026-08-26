@@ -1,6 +1,6 @@
-# FZERO Design Language — EVERYTHING IS SIGNAL
+# OVERSIGNAL Design Language — EVERYTHING IS SIGNAL
 
-The world of FZERO is not made of matter. Everything the player sees is projected
+The world of OVERSIGNAL is not made of matter. Everything the player sees is projected
 light, transmitted energy, running signal. Nothing has mass; everything has
 brightness, frequency, and decay.
 

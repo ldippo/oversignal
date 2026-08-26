@@ -12,7 +12,7 @@ Players who like fast arcade racers and music games: they arrive with Spotify or
 
 ## Product Purpose
 
-FZERO is a free web anti-gravity roguelite racer that runs on whatever music you're listening to. Live audio analysis turns beats into boost gates, drops into overdrive, energy into world speed. Success: the player syncs their music, immediately understands "drive, hit gates on the beat," and comes back to chase builds (ships + modules) with banked scrap.
+OVERSIGNAL is a free web anti-gravity roguelite racer that runs on whatever music you're listening to. Live audio analysis turns beats into boost gates, drops into overdrive, energy into world speed. Success: the player syncs their music, immediately understands "drive, hit gates on the beat," and comes back to chase builds (ships + modules) with banked scrap.
 
 ## Brand Personality
 

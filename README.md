@@ -1,11 +1,11 @@
-# FZERO
+# OVERSIGNAL
 
 Anti-gravity arcade roguelite racer that runs on your music. F-Zero speed,
 run-based upgrade drafts, a ship-and-module hangar, and a beat-synced dash
 economy driven by live audio analysis of whatever you're listening to —
 Spotify, YouTube, anything.
 
-**Play:** https://fzero-delta.vercel.app
+**Play:** https://oversignal.vercel.app
 
 ## How the music mechanic works
 
@@ -55,7 +55,7 @@ Mobile: auto-accelerate, hold left/right half to steer, DASH/BRAKE buttons.
 
 Cosmetic track + album art card. Authorization Code + PKCE, no backend.
 Setup: create an app at https://developer.spotify.com/dashboard, add your
-origin as redirect URI (e.g. `https://fzero-delta.vercel.app/`), then paste
+origin as redirect URI (e.g. `https://oversignal.vercel.app/`), then paste
 the Client ID via the title's SPOTIFY button (stored in localStorage) or set
 `VITE_SPOTIFY_CLIENT_ID` at build time. Scope: `user-read-currently-playing`.
 
