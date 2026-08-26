@@ -17,6 +17,8 @@ import { MusicState } from "./audio/music-state";
 import { captureTab, captureMic, silentSource, type AudioSourceKind } from "./audio/capture";
 import { showMenu } from "./ui/screens";
 import { AudioDebug } from "./ui/audio-debug";
+import { NowPlayingHud } from "./ui/now-playing";
+import { handleRedirect } from "./audio/spotify";
 
 // ---------- renderer / scene ----------
 
@@ -86,6 +88,7 @@ const ui = document.getElementById("ui")!;
 const hud = new Hud(ui);
 const music = new MusicState();
 const audioDebug = new AudioDebug(ui);
+const nowPlaying = new NowPlayingHud(ui);
 let overlay: HTMLDivElement | null = null;
 
 async function pickAudio(kind: AudioSourceKind): Promise<void> {
@@ -260,17 +263,23 @@ const loop = new GameLoop(
     post.update(music.energy, music.beatPulse, music.dropActive);
     hud.update(run, ship.speed * 3.6, 1 / 60);
     audioDebug.update(music);
+    nowPlaying.update();
     post.render();
   },
 );
 
 hud.setVisible(false);
-showMenu(ui, save, async (kind) => {
-  await pickAudio(kind);
-  hud.setVisible(true);
-  state = "run";
-  startSegment();
-});
+void handleRedirect()
+  .catch(() => {}) // failed token exchange → menu just shows disconnected
+  .then(() => {
+    showMenu(ui, save, async (kind) => {
+      await pickAudio(kind);
+      hud.setVisible(true);
+      nowPlaying.startPolling();
+      state = "run";
+      startSegment();
+    });
+  });
 loop.start();
 
 // dev/test hook (harmless in prod; lets automation poke game state)

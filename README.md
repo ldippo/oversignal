@@ -23,6 +23,15 @@ grid so the on-beat window feels right despite detection latency.
   six seconds of invulnerable max-speed.
 - **No music?** RUN SILENT uses an internal 120 BPM clock; every mechanic still works.
 
+## Spotify now-playing HUD (optional)
+
+Cosmetic card showing current track + album art. Uses Authorization Code + PKCE —
+no backend, no client secret. Setup: create an app at
+https://developer.spotify.com/dashboard, add your origin as redirect URI (e.g.
+`https://fzero-delta.vercel.app/`), then either paste the Client ID via the menu's
+CONNECT SPOTIFY button (stored in localStorage) or set `VITE_SPOTIFY_CLIENT_ID` at
+build time. Scope: `user-read-currently-playing` only.
+
 ## Roguelite loop
 
 Run = a chain of procedurally generated sectors (seeded, ~3 km each) that get
