@@ -14,6 +14,7 @@ import { Ship } from "./ship/ship";
 import { loadSave, bankRun } from "./core/save";
 import { draftUpgrades } from "./game/upgrades";
 import { shipById } from "./game/ships";
+import { moduleById } from "./game/modules";
 import { showUpgradeDraft } from "./ui/screens";
 import { showHangar } from "./ui/hangar";
 import { attachInput, readInput } from "./ship/input";
@@ -90,6 +91,7 @@ let elapsed = 0;
 let wasDropActive = false;
 let fenceOpenNow = false;
 let ringChain = 0;
+let chainForgive = 0;
 
 const ship = new Ship(generateSegment({ seed: 1, difficulty: 0 }).spline, 14);
 scene.add(ship.object);
@@ -133,6 +135,7 @@ function startSegment(): void {
   juice.setRails(trackGroup);
   trails.setColor(ship.def.accent);
   ringChain = 0;
+  chainForgive = run.mods.chainKeeper ? 1 : 0;
   ship.setSpline(segment.spline, segment.halfWidth);
   ship.s = 0;
   ship.lateral = 0;
@@ -161,7 +164,7 @@ function finishSegment(): void {
   if (trackGroup) { disposeGroup(trackGroup); trackGroup = null; }
   if (features) { disposeGroup(features.group); features = null; }
   warp = new WarpTunnel(scene, ship.object, themeFor(run.segmentIndex - 1));
-  showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(3), (u) => {
+  showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(run, 3), (u) => {
     u.apply(run, ship);
     warp?.dispose();
     warp = null;
@@ -189,18 +192,21 @@ function gameOver(): void {
   overlay.querySelector("#menu")!.addEventListener("click", () => window.location.reload());
 }
 
-/** Fresh run with the selected ship's stats + permanent meta upgrades applied. */
+/** Fresh run with the selected ship's stats + socketed modules applied. */
 function newRun(): Run {
   const def = shipById(save.selectedShip);
   ship.setDef(def);
   const r = new Run((Math.random() * 0xffffffff) >>> 0);
-  r.mods.hullMax = Math.max(30, r.mods.hullMax + def.stats.hullDelta + save.meta.plating * 10);
-  r.hull = r.mods.hullMax;
-  r.mods.rhythmWindow += def.stats.rhythmDelta + save.meta.groove * 0.01;
-  r.mods.boostPower += def.stats.boostDelta + save.meta.boost * 0.08;
-  r.mods.scrapMult += save.meta.salvage * 0.1;
+  r.mods.hullMax = Math.max(30, r.mods.hullMax + def.stats.hullDelta);
+  r.mods.rhythmWindow += def.stats.rhythmDelta;
+  r.mods.boostPower += def.stats.boostDelta;
   r.mods.shieldPerSegment += def.stats.shieldPerSegment;
   r.mods.magnetRadius += def.stats.magnetDelta;
+  for (const id of save.loadouts[save.selectedShip] ?? []) {
+    moduleById(id)?.apply(r.mods);
+  }
+  r.hull = r.mods.hullMax;
+  r.dashPips = Math.min(3, r.mods.maxPips);
   return r;
 }
 
@@ -272,6 +278,8 @@ const loop = new GameLoop(
       juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 30);
       juice.strobeRails();
       juice.kick(0.8);
+      music.dropTimer += run.mods.dropExtend;
+      if (run.mods.odCharger) run.dashPips = run.mods.maxPips;
     }
     wasDropActive = music.dropActive;
 
@@ -323,6 +331,20 @@ const loop = new GameLoop(
           juice.kick(0.4);
           loop.freeze(0.04);
           juice.floatText(fpos, camera, "+150 SHATTER", "#ffc44e");
+          if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount);
+          if (run.mods.shatterwave) {
+            // detonate hazards just ahead of the shatter point
+            for (const other of features.features) {
+              if (other.taken || other === ev.feature) continue;
+              if (other.kind !== "shard" && other.kind !== "barrier") continue;
+              if (other.s < ev.feature.s || other.s > ev.feature.s + run.mods.shatterwaveRadius) continue;
+              other.taken = true;
+              other.mesh.visible = false;
+              run.addScore(100);
+              juice.burst(other.mesh.position, 16, currentTheme.obstacle, 20);
+              if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount);
+            }
+          }
         } else if (!music.dropActive) {
           run.damage(18);
           ship.speed *= 0.6;
@@ -349,17 +371,21 @@ const loop = new GameLoop(
       } else if (ev.kind === "ring") {
         if (ev.collected) {
           ringChain++;
-          run.addScrap(5);
+          run.addScrap(5 * run.mods.ringScrapMult);
           run.addScore(25);
           juice.burst(fpos, 8, currentTheme.scrap, 10);
           if (ringChain % 5 === 0) {
-            run.addScrap(15);
-            run.addScore(100);
+            run.addScrap(15 * run.mods.chainBonusMult);
+            run.addScore(100 * run.mods.chainBonusMult);
             run.earnPip(1);
+            chainForgive = run.mods.chainKeeper ? 1 : 0;
             hud.flashBanner(`CHAIN ${ringChain}`, 0.5);
             juice.strobeRails();
-            juice.floatText(fpos, camera, `CHAIN ${ringChain} +100`, "#ffc44e");
+            juice.floatText(fpos, camera, `CHAIN ${ringChain} +${Math.round(100 * run.mods.chainBonusMult)}`, "#ffc44e");
           }
+        } else if (chainForgive > 0) {
+          chainForgive--;
+          juice.floatText(ship.object.position, camera, "CHAIN KEPT", "#8aff6a");
         } else {
           ringChain = 0;
         }

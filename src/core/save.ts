@@ -1,41 +1,67 @@
-import type { MetaTrackId } from "../game/meta";
+import { META_TRACKS, tierCost, type MetaTrackId } from "../game/meta";
 
 export interface SaveData {
+  v: number;
   scrap: number;
   bestScore: number;
   totalRuns: number;
   ownedShips: string[];
   selectedShip: string;
-  meta: Record<MetaTrackId, number>; // upgrade tiers
+  ownedModules: string[];
+  loadouts: Record<string, string[]>; // shipId -> socketed module ids
 }
 
 const KEY = "fzero-save-v1";
 
 const DEFAULTS: SaveData = {
+  v: 3,
   scrap: 0,
   bestScore: 0,
   totalRuns: 0,
   ownedShips: ["stinger"],
   selectedShip: "stinger",
-  meta: { plating: 0, salvage: 0, boost: 0, groove: 0 },
+  ownedModules: [],
+  loadouts: {},
 };
+
+interface LegacySave extends Partial<SaveData> {
+  meta?: Record<MetaTrackId, number>;
+}
+
+/** v2 linear-track spend, refunded in full on migration to modules. */
+function legacyRefund(meta: Record<MetaTrackId, number>): number {
+  let refund = 0;
+  for (const track of META_TRACKS) {
+    const tiers = meta[track.id] ?? 0;
+    for (let t = 0; t < tiers; t++) refund += tierCost(track, t);
+  }
+  return refund;
+}
 
 export function loadSave(): SaveData {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      return {
+      const parsed = JSON.parse(raw) as LegacySave;
+      const save: SaveData = {
         ...DEFAULTS,
         ...parsed,
+        v: 3,
         ownedShips: parsed.ownedShips?.length ? parsed.ownedShips : [...DEFAULTS.ownedShips],
-        meta: { ...DEFAULTS.meta, ...(parsed.meta ?? {}) },
+        ownedModules: parsed.ownedModules ?? [],
+        loadouts: parsed.loadouts ?? {},
       };
+      if (parsed.meta) {
+        save.scrap += legacyRefund(parsed.meta);
+        delete (save as LegacySave).meta;
+        persistSave(save);
+      }
+      return save;
     }
   } catch {
     // corrupted save → fresh start
   }
-  return { ...DEFAULTS, ownedShips: [...DEFAULTS.ownedShips], meta: { ...DEFAULTS.meta } };
+  return { ...DEFAULTS, ownedShips: [...DEFAULTS.ownedShips], ownedModules: [], loadouts: {} };
 }
 
 export function persistSave(data: SaveData): void {

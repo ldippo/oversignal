@@ -8,6 +8,16 @@ export interface RunModifiers {
   scrapMult: number;
   hullRegenOnBeat: number; // hull per on-beat gate hit
   maxPips: number; // dash charges
+  // module-granted behaviors
+  shatterwave: boolean;
+  shatterwaveRadius: number; // meters of chain-detonation ahead of a shatter
+  pipSiphon: boolean;
+  pipSiphonAmount: number;
+  dropExtend: number; // extra overdrive seconds
+  odCharger: boolean;
+  ringScrapMult: number;
+  chainKeeper: boolean;
+  chainBonusMult: number;
 }
 
 export const BASE_MODIFIERS: RunModifiers = {
@@ -20,6 +30,15 @@ export const BASE_MODIFIERS: RunModifiers = {
   scrapMult: 1,
   hullRegenOnBeat: 0,
   maxPips: 3,
+  shatterwave: false,
+  shatterwaveRadius: 30,
+  pipSiphon: false,
+  pipSiphonAmount: 0.5,
+  dropExtend: 0,
+  odCharger: false,
+  ringScrapMult: 1,
+  chainKeeper: false,
+  chainBonusMult: 1,
 };
 
 export class Run {

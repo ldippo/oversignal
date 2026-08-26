@@ -6,6 +6,8 @@ export interface Upgrade {
   name: string;
   desc: string;
   apply(run: Run, ship: Ship): void;
+  /** Module-synergy cards only appear when their module is socketed. */
+  requires?: (run: Run) => boolean;
 }
 
 export const UPGRADE_POOL: Upgrade[] = [
@@ -85,11 +87,33 @@ export const UPGRADE_POOL: Upgrade[] = [
     desc: "Restore 40 hull now.",
     apply: (run) => { run.heal(40); },
   },
+  // module-synergy cards
+  {
+    id: "resonant-shatter",
+    name: "RESONANT SHATTER",
+    desc: "[SHATTERWAVE] Detonation range +50%.",
+    requires: (run) => run.mods.shatterwave,
+    apply: (run) => { run.mods.shatterwaveRadius *= 1.5; },
+  },
+  {
+    id: "double-siphon",
+    name: "DOUBLE SIPHON",
+    desc: "[PIP SIPHON] Shatters refund a full pip.",
+    requires: (run) => run.mods.pipSiphon,
+    apply: (run) => { run.mods.pipSiphonAmount = 1; },
+  },
+  {
+    id: "chain-amp",
+    name: "CHAIN AMP",
+    desc: "[CHAIN KEEPER] Chain bonuses doubled.",
+    requires: (run) => run.mods.chainKeeper,
+    apply: (run) => { run.mods.chainBonusMult *= 2; },
+  },
 ];
 
 /** Pick n distinct upgrades. Plain Math.random — draft luck isn't part of the seed. */
-export function draftUpgrades(n = 3): Upgrade[] {
-  const pool = [...UPGRADE_POOL];
+export function draftUpgrades(run: Run, n = 3): Upgrade[] {
+  const pool = UPGRADE_POOL.filter((u) => !u.requires || u.requires(run));
   const picks: Upgrade[] = [];
   while (picks.length < n && pool.length > 0) {
     picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
