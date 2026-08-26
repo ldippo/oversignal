@@ -20,6 +20,7 @@ import { moduleById } from "./game/modules";
 import { showUpgradeDraft } from "./ui/screens";
 import { showHangar } from "./ui/hangar";
 import { showPause } from "./ui/pause";
+import { sfx } from "./audio/sfx";
 import { attachInput, readInput } from "./ship/input";
 import { TouchControls, isTouchDevice } from "./ship/touch";
 import { Run } from "./game/run";
@@ -114,6 +115,7 @@ touch?.setVisible(false);
 
 function applySettings(): void {
   music.latencyOffset = save.settings.latencyMs / 1000;
+  sfx.setVolume(save.settings.sfxVolume);
   juice.setAccessibility(save.settings.screenShake, save.settings.flashes);
 }
 
@@ -121,6 +123,7 @@ let pauseOverlay: HTMLDivElement | null = null;
 
 function pauseGame(): void {
   if (state !== "run") return;
+  sfx.ensure();
   state = "paused";
   touch?.setVisible(false);
   pauseOverlay = showPause(ui, save, music, applySettings, {
@@ -195,6 +198,7 @@ function finishSegment(): void {
   run.segmentIndex++;
   run.addScore(500);
   state = "warp";
+  sfx.warp();
   touch?.setVisible(false);
   hud.setVisible(false);
   environment.setCelestialVisible(false);
@@ -207,6 +211,7 @@ function finishSegment(): void {
   warp = new WarpTunnel(scene, ship.object, themeFor(run.segmentIndex - 1));
   const draftRand = dailyMode ? mulberry32((run.seed ^ (run.segmentIndex * 0x51ed270b)) >>> 0) : Math.random;
   showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(run, 3, draftRand), (u) => {
+    sfx.uiClick();
     u.apply(run, ship);
     warp?.dispose();
     warp = null;
@@ -220,6 +225,7 @@ function finishSegment(): void {
 
 function gameOver(): void {
   state = "gameover";
+  sfx.death();
   touch?.setVisible(false);
   hud.setVisible(false);
   const payout = run.payout();
@@ -380,6 +386,7 @@ const loop = new GameLoop(
     juice.update(dt);
     if (music.dropActive && !wasDropActive) {
       hud.flashBanner("OVERDRIVE", 2.5);
+      sfx.overdrive();
       juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 30);
       juice.strobeRails();
       juice.kick(0.8);
@@ -396,6 +403,7 @@ const loop = new GameLoop(
     if (input.dash && !ship.dashing && run.dashPips >= 1) {
       run.dashPips -= 1;
       ship.dash();
+      sfx.dash();
       juice.kick(0.6);
       juice.burst(ship.object.position, 16, ship.def.accent, 18);
     }
@@ -415,6 +423,7 @@ const loop = new GameLoop(
           run.heal(run.mods.hullRegenOnBeat);
           run.earnPip(1);
           ship.applyBoost(0.42 * run.mods.boostPower, 1.6);
+          sfx.gatePerfect(run.combo);
           hud.flashBanner(`PERFECT ×${run.combo}`, 0.6);
           juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.gate, 22);
           juice.burst(fpos, 20, 0xffffff, 20);
@@ -424,12 +433,14 @@ const loop = new GameLoop(
           run.combo = 0;
           run.addScore(40);
           ship.applyBoost(0.16 * run.mods.boostPower, 0.8);
+          sfx.gateMiss();
           juice.kick(0.2);
           juice.floatText(fpos, camera, "+40");
         }
       } else if (ev.kind === "shard" || ev.kind === "barrier") {
         if (ship.dashing) {
           run.addScore(150);
+          sfx.shatter();
           hud.flashBanner("SHATTER", 0.4);
           juice.burst(fpos, 26, currentTheme.obstacle, 26);
           juice.shockwave(fpos, ev.feature.mesh.quaternion, currentTheme.obstacle, 14);
@@ -454,6 +465,7 @@ const loop = new GameLoop(
           run.damage(18);
           ship.speed *= 0.6;
           run.combo = 0;
+          sfx.damage();
           juice.burst(ship.object.position, 18, 0xff4030, 16);
           juice.damageFlash();
           juice.rumble(0.8);
@@ -463,12 +475,14 @@ const loop = new GameLoop(
       } else if (ev.kind === "fence") {
         if (fenceOpenNow || music.dropActive || ship.dashing) {
           run.addScore(60);
+          sfx.fencePass();
           juice.burst(fpos, 10, currentTheme.obstacle, 10);
           juice.floatText(fpos, camera, "+60");
         } else {
           run.damage(14);
           ship.speed *= 0.7;
           run.combo = 0;
+          sfx.damage();
           juice.damageFlash();
           juice.rumble(0.6);
           juice.floatText(ship.object.position, camera, "-14", "#ff5a5a");
@@ -478,6 +492,7 @@ const loop = new GameLoop(
           ringChain++;
           run.addScrap(5 * run.mods.ringScrapMult);
           run.addScore(25);
+          sfx.ring(ringChain);
           juice.burst(fpos, 8, currentTheme.scrap, 10);
           if (ringChain % 5 === 0) {
             run.addScrap(15 * run.mods.chainBonusMult);
@@ -495,6 +510,7 @@ const loop = new GameLoop(
           ringChain = 0;
         }
       } else if (ev.kind === "core" && ev.collected) {
+        sfx.core();
         run.addScrap(25);
         run.heal(10);
         run.addScore(150);
@@ -505,6 +521,7 @@ const loop = new GameLoop(
     }
 
     if (ship.hitWall) {
+      sfx.scrape();
       run.damage(WALL_DPS * (0.3 + (ship.speed / ship.stats.maxSpeed) * 0.7) * dt);
       run.combo = 0;
       if (Math.random() < dt * 40) {
@@ -524,6 +541,7 @@ const loop = new GameLoop(
   (_, ) => {
     environment.update(music, ship.object.position);
     features?.animate(music.beatPulse, elapsed, fenceOpenNow, music.energy);
+    sfx.engineUpdate(state === "run" ? ship.speed / ship.stats.maxSpeed : 0);
     trails.update(
       ship.object,
       ship.speed / ship.stats.maxSpeed,
@@ -548,6 +566,7 @@ function openMenu(): void {
     save,
     async (kind) => {
       if (kind !== "keep") await pickAudio(kind);
+      sfx.ensure();
       dailyMode = false;
       hud.setVisible(true);
       nowPlaying.startPolling();
@@ -569,6 +588,7 @@ function openMenu(): void {
 
 /** One attempt/day, stock STINGER, shared seed — pure skill comparison. */
 function startDaily(): void {
+  sfx.ensure();
   dailyMode = true;
   ship.setDef(shipById("stinger"));
   run = new Run(dailySeed(todayUTC()));
@@ -609,5 +629,6 @@ Object.assign(window as unknown as Record<string, unknown>, {
     get ship() { return ship; },
     get features() { return features; },
     music,
+    sfx,
   },
 });
