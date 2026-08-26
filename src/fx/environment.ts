@@ -49,6 +49,10 @@ export class Environment {
     scene.add(this.celestial);
   }
 
+  setCelestialVisible(v: boolean): void {
+    this.celestial.visible = v;
+  }
+
   setTheme(theme: SectorTheme): void {
     this.domeMat.map?.dispose();
     this.domeMat.map = gradientTexture(theme.skyHorizon, theme.skyZenith);

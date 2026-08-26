@@ -106,16 +106,18 @@ export function showUpgradeDraft(
   onPick: (u: Upgrade) => void,
 ): HTMLDivElement {
   const el = document.createElement("div");
-  el.className = "screen";
+  el.className = "draft-screen";
   el.innerHTML = `
-    <h2>SECTOR ${sectorCleared} CLEAR</h2>
-    <p>Choose an upgrade</p>
-    <div class="cards"></div>
+    <div class="draft-block">
+      <h2 class="draft-title">SECTOR ${sectorCleared} CLEAR</h2>
+      <p class="draft-sub">CHOOSE UPGRADE</p>
+    </div>
+    <div class="draft-cards"></div>
   `;
-  const cards = el.querySelector(".cards")!;
+  const cards = el.querySelector(".draft-cards")!;
   upgrades.forEach((u, i) => {
     const card = document.createElement("button");
-    card.className = "card";
+    card.className = "draft-card";
     card.innerHTML = `<span class="card-key">${i + 1}</span><span class="card-name">${u.name}</span><span class="card-desc">${u.desc}</span>`;
     card.addEventListener("click", () => {
       el.remove();

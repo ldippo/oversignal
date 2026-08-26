@@ -163,8 +163,9 @@ function finishSegment(): void {
   run.addScore(500);
   state = "warp";
   touch?.setVisible(false);
+  hud.setVisible(false);
+  environment.setCelestialVisible(false);
   flash();
-  hud.flashBanner("SECTOR CLEAR", 1.5);
   juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 40);
   juice.kick(1);
   // old world drops away; the warp tunnel hides the rebuild
@@ -176,6 +177,8 @@ function finishSegment(): void {
     warp?.dispose();
     warp = null;
     flash();
+    hud.setVisible(true);
+    environment.setCelestialVisible(true);
     state = "run";
     startSegment();
   });
