@@ -12,7 +12,7 @@ import { dataSpire, transmissionArray, ghostWireframe, shardCluster, heroLandmar
  *   wide bar   → lane commit (barrier)
  *   membrane   → pass on the beat (pulse fence)
  */
-export type FeatureKind = "gate" | "shard" | "barrier" | "fence" | "ring";
+export type FeatureKind = "gate" | "shard" | "barrier" | "fence" | "ring" | "core";
 
 export interface Feature {
   kind: FeatureKind;
@@ -94,9 +94,12 @@ function barrierMesh(width: number, color: number): THREE.Group {
 
 function fenceMesh(halfWidth: number, color: number): THREE.Mesh {
   // 75% width: the extreme track edges are a narrow no-timing escape lane
+  const tex = scanlines().clone();
+  tex.needsUpdate = true;
+  tex.repeat.set(1, 7);
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(halfWidth * 2 * 0.75, 3.2),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, side: THREE.DoubleSide, alphaMap: tex }),
   );
   m.position.y = 1.6;
   return m;
@@ -109,6 +112,36 @@ function ringMesh(color: number): THREE.Mesh {
   );
   m.position.y = 1.6;
   return m;
+}
+
+function coreMesh(color: number): THREE.Group {
+  const g = new THREE.Group();
+  const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(1.1), new THREE.MeshBasicMaterial({ color }));
+  g.add(crystal);
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(1.9, 0.09, 6, 24),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 }),
+  );
+  g.add(halo);
+  return g;
+}
+
+/** Shared scanline alpha texture: the holographic-membrane shimmer. */
+let scanlineTex: THREE.Texture | null = null;
+function scanlines(): THREE.Texture {
+  if (scanlineTex) return scanlineTex;
+  const canvas = document.createElement("canvas");
+  canvas.width = 4;
+  canvas.height = 8;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "rgba(255,255,255,1)";
+  ctx.fillRect(0, 0, 4, 5);
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(0, 5, 4, 3);
+  scanlineTex = new THREE.CanvasTexture(canvas);
+  scanlineTex.wrapS = THREE.RepeatWrapping;
+  scanlineTex.wrapT = THREE.RepeatWrapping;
+  return scanlineTex;
 }
 
 function finishArchMesh(halfWidth: number, color: number): THREE.Group {
@@ -135,6 +168,7 @@ export class FeatureField {
   private gateMeshes: THREE.Group[] = [];
   private fenceMeshes: THREE.Mesh[] = [];
   private spinners: THREE.Object3D[] = [];
+  private cores: THREE.Group[] = [];
   private arrayTips: THREE.MeshBasicMaterial[] = [];
   private ghosts: THREE.LineBasicMaterial[] = [];
   private ghostPhases: number[] = [];
@@ -190,6 +224,7 @@ export class FeatureField {
     // blockers: shard 55% / barrier 30% / fence 15% (fence needs beat confidence)
     const blockerS: number[] = [];
     const fenceS: number[] = [];
+    const placedBlockers: { s: number; lateral: number }[] = [];
     const nearAny = (s: number, list: number[], minDist: number): boolean =>
       list.some((o) => Math.abs(o - s) < minDist);
     const blockerCount = 10 + difficulty * 6;
@@ -201,18 +236,20 @@ export class FeatureField {
       blockerS.push(s);
       const roll = rand();
       if (roll < 0.55) {
+        const lateral = (rand() * 2 - 1) * (halfWidth - 3);
+        placedBlockers.push({ s, lateral });
         place({
-          kind: "shard", s,
-          lateral: (rand() * 2 - 1) * (halfWidth - 3),
+          kind: "shard", s, lateral,
           halfW: 1.7,
           mesh: shardMesh(theme.obstacle), taken: false,
         });
       } else if (roll < 0.85 || !confident) {
         const width = halfWidth * 1.2; // covers 60% of the track
         const side = rand() < 0.5 ? -1 : 1;
+        const lateral = side * halfWidth * 0.4;
+        placedBlockers.push({ s, lateral });
         place({
-          kind: "barrier", s,
-          lateral: side * halfWidth * 0.4,
+          kind: "barrier", s, lateral,
           halfW: width / 2,
           mesh: barrierMesh(width, theme.obstacle), taken: false,
         });
@@ -249,6 +286,18 @@ export class FeatureField {
         mesh.userData.lift = 1.6;
         place({ kind: "ring", s, lateral: idealLateral(s), halfW: 1.6, mesh, taken: false });
       }
+    }
+
+    // CORE pickups: big scrap+hull rewards parked right beside a hazard (risk/reward)
+    const coreCount = 2 + Math.floor(difficulty / 3);
+    for (let i = 0; i < coreCount && placedBlockers.length > 0; i++) {
+      const b = placedBlockers[Math.floor(rand() * placedBlockers.length)];
+      const side = rand() < 0.5 ? -1 : 1;
+      const lateral = THREE.MathUtils.clamp(b.lateral + side * 3.4, -(halfWidth - 2.5), halfWidth - 2.5);
+      const mesh = coreMesh(theme.scrap);
+      mesh.userData.lift = 1.8;
+      this.cores.push(mesh);
+      place({ kind: "core", s: b.s + 7, lateral, halfW: 2, mesh, taken: false });
     }
 
     // finish arch + approach strip lights (visual only; crossing = finishSegment)
@@ -312,13 +361,22 @@ export class FeatureField {
     for (const f of this.fenceMeshes) {
       const mat = f.material as THREE.MeshBasicMaterial;
       mat.opacity = fenceOpen ? 0.06 : 0.45 + beatPulse * 0.3;
+      mat.alphaMap!.offset.y = time * 0.7; // scanline shimmer
       f.scale.y = fenceOpen ? 0.12 : 1;
     }
+    const ringPulse = 1 + beatPulse * 0.18;
     for (const f of this.features) {
       if (f.taken) continue;
-      if (f.kind === "ring") f.mesh.rotation.z = time * 1.5;
-      else if (f.kind === "shard") f.mesh.rotation.y = time * 0.6 + f.s; // corrupted-signal idle spin
+      if (f.kind === "ring") {
+        f.mesh.rotation.z = time * 1.5;
+        f.mesh.scale.setScalar(ringPulse);
+      } else if (f.kind === "shard") f.mesh.rotation.y = time * 0.6 + f.s; // corrupted-signal idle spin
       else if (f.kind === "barrier") f.mesh.scale.y = 1 + beatPulse * 0.07;
+    }
+    for (const c of this.cores) {
+      c.rotation.y = time * 1.2;
+      c.rotation.x = time * 0.7;
+      c.scale.setScalar(1 + beatPulse * 0.22);
     }
     for (const s of this.spinners) {
       s.rotation.y += (s.userData.spin as number) * 0.016;
@@ -350,11 +408,11 @@ export class FeatureField {
       } else if (f.kind === "fence") {
         // edge lane past the membrane = clean dodge, no event either way
         if (dist < f.halfW) events.push({ kind: "fence", feature: f, collected: true });
-      } else if (f.kind === "ring") {
+      } else if (f.kind === "ring" || f.kind === "core") {
         const hit = dist < f.halfW + magnetRadius;
         f.taken = true;
         if (hit) f.mesh.visible = false;
-        events.push({ kind: "ring", feature: f, collected: hit });
+        events.push({ kind: f.kind, feature: f, collected: hit });
       } else if (dist < f.halfW + 1.4) {
         f.taken = true;
         f.mesh.visible = false;

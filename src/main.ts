@@ -312,6 +312,7 @@ const loop = new GameLoop(
     elapsed += dt;
     music.update(dt);
 
+    juice.setIntensity(music.energy);
     juice.update(dt);
     if (music.dropActive && !wasDropActive) {
       hud.flashBanner("OVERDRIVE", 2.5);
@@ -429,6 +430,13 @@ const loop = new GameLoop(
         } else {
           ringChain = 0;
         }
+      } else if (ev.kind === "core" && ev.collected) {
+        run.addScrap(25);
+        run.heal(10);
+        run.addScore(150);
+        juice.burst(fpos, 22, currentTheme.scrap, 18);
+        juice.kick(0.35);
+        juice.floatText(fpos, camera, "+25 ◆ CORE", "#ffc44e");
       }
     }
 

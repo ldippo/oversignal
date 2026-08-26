@@ -125,16 +125,20 @@ function mergeGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
   return merged;
 }
 
-/** 3-6 edge-lit crystals; replaces rocks. Drift/spin via userData.spin. */
+/**
+ * Edge-lit crystal cluster; replaces rocks. One dominant spire + satellites
+ * sharing its tilt axis — reads as a single silhouette, not scattered debris.
+ */
 export function shardCluster(rand: Rand, theme: SectorTheme): THREE.Group {
   const g = new THREE.Group();
-  const count = 3 + Math.floor(rand() * 4);
-  for (let i = 0; i < count; i++) {
+  const tiltX = (rand() - 0.5) * 0.7;
+  const tiltZ = (rand() - 0.5) * 0.7;
+  const addCrystal = (scaleY: number, offset: THREE.Vector3, girth: number): void => {
     const geo = new THREE.OctahedronGeometry(1);
-    geo.scale(0.7 + rand(), 1.2 + rand() * 1.6, 0.7 + rand());
+    geo.scale(girth, scaleY, girth);
     const core = new THREE.Mesh(geo, darkMat());
-    core.position.set((rand() - 0.5) * 7, (rand() - 0.5) * 5, (rand() - 0.5) * 7);
-    core.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+    core.position.copy(offset);
+    core.rotation.set(tiltX + (rand() - 0.5) * 0.25, rand() * Math.PI, tiltZ + (rand() - 0.5) * 0.25);
     g.add(core);
     const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(geo),
@@ -143,8 +147,19 @@ export function shardCluster(rand: Rand, theme: SectorTheme): THREE.Group {
     edges.position.copy(core.position);
     edges.rotation.copy(core.rotation);
     g.add(edges);
+  };
+  addCrystal(3.2 + rand() * 2, new THREE.Vector3(0, 0, 0), 0.9 + rand() * 0.3);
+  const satellites = 2 + Math.floor(rand() * 3);
+  for (let i = 0; i < satellites; i++) {
+    const angle = rand() * Math.PI * 2;
+    const r = 2.2 + rand() * 2.5;
+    addCrystal(
+      1 + rand() * 1.4,
+      new THREE.Vector3(Math.cos(angle) * r, -1 - rand() * 1.5, Math.sin(angle) * r),
+      0.5 + rand() * 0.4,
+    );
   }
-  g.userData.spin = (rand() - 0.5) * 0.4;
+  g.userData.spin = (rand() - 0.5) * 0.3;
   return g;
 }
 

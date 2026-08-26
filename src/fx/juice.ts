@@ -13,6 +13,12 @@ export class Juice {
   fovKick = 0;
   camKick = 0; // backward pull along tangent
   shake = 0;
+  /** Adaptive loudness: fx scale with music energy (0.55 quiet … ~1.2 chorus). */
+  intensity = 1;
+
+  setIntensity(energy: number): void {
+    this.intensity = 0.55 + energy * 0.7;
+  }
 
   private particles: THREE.Points;
   private pPos: Float32Array;
@@ -72,7 +78,8 @@ export class Juice {
   /** Spray count particles from pos. spread = velocity randomness, dir = bias. */
   burst(pos: THREE.Vector3, count: number, color: number, speed = 14, dir?: THREE.Vector3): void {
     const c = new THREE.Color(color);
-    for (let n = 0; n < count; n++) {
+    const scaled = Math.max(2, Math.round(count * this.intensity));
+    for (let n = 0; n < scaled; n++) {
       const i = this.pCursor;
       this.pCursor = (this.pCursor + 1) % PARTICLE_COUNT;
       this.pPos[i * 3] = pos.x;
@@ -103,12 +110,13 @@ export class Juice {
   }
 
   kick(strength: number): void {
-    this.fovKick = Math.min(14, this.fovKick + strength * 10);
-    this.camKick = Math.min(4, this.camKick + strength * 2.5);
+    const s = strength * this.intensity;
+    this.fovKick = Math.min(14, this.fovKick + s * 10);
+    this.camKick = Math.min(4, this.camKick + s * 2.5);
   }
 
   rumble(strength: number): void {
-    this.shake = Math.min(1.2, this.shake + strength);
+    this.shake = Math.min(1.2, this.shake + strength * this.intensity);
   }
 
   /** Floating score text at a world position (projected once, CSS animates). */

@@ -1,48 +1,63 @@
 # FZERO
 
-Anti-gravity arcade roguelite racer that runs on your music. F-Zero speed, run-based
-upgrade drafts, and a beat-synced boost system driven by live audio analysis of
-whatever you're listening to — Spotify, YouTube, anything.
+Anti-gravity arcade roguelite racer that runs on your music. F-Zero speed,
+run-based upgrade drafts, a ship-and-module hangar, and a beat-synced dash
+economy driven by live audio analysis of whatever you're listening to —
+Spotify, YouTube, anything.
 
 **Play:** https://fzero-delta.vercel.app
 
 ## How the music mechanic works
 
-Spotify removed its audio-analysis API for new apps (Nov 2024), so this game listens
-instead of asking: pick **SYNC TAB AUDIO** and share the tab playing music (tick
-"Also share tab audio"). The Web Audio API runs an FFT each frame; a spectral-flux
-onset detector estimates BPM and beat phase, and gameplay reads the *predicted* beat
-grid so the on-beat window feels right despite detection latency.
+Spotify removed its audio-analysis API for new apps (Nov 2024), so this game
+listens instead of asking: pick **SYNC YOUR MUSIC** and share the tab playing
+audio (tick "Also share tab audio"). The Web Audio API runs an FFT each frame;
+a spectral-flux onset detector estimates BPM and beat phase, and gameplay reads
+the *predicted* beat grid so on-beat timing feels right despite detection latency.
 
-- **Beat gates** — pass through a gate on the beat: big boost + PERFECT combo chain.
-  Off-beat: small boost, combo resets.
-- **Energy** — loudness vs. rolling baseline scales world speed (quiet verse =
-  breather, chorus = chaos) and bloom intensity.
-- **Bass** — camera rumble.
-- **The drop** — a sustained lull followed by an energy spike triggers OVERDRIVE:
-  six seconds of invulnerable max-speed.
-- **No music?** RUN SILENT uses an internal 120 BPM clock; every mechanic still works.
+- **Beat gates** — cross on the beat: boost + PERFECT combo + a dash pip.
+- **Pulse fences** — energy membranes that open on the beat; cross in rhythm,
+  thread the narrow edge lane, or take the hit. Only spawn when the beat
+  tracker is confident.
+- **Energy** — loudness vs. rolling baseline scales world speed, sky
+  brightness, and how loud the effects hit (quiet verse = breather).
+- **The drop** — a sustained lull followed by an energy spike triggers
+  OVERDRIVE: six seconds of invulnerable max-speed.
+- **No music?** Play-without-music mode uses an internal 120 BPM clock; every
+  mechanic still works.
 
-## Spotify now-playing HUD (optional)
+## Pulse dash
 
-Cosmetic card showing current track + album art. Uses Authorization Code + PKCE —
-no backend, no client secret. Setup: create an app at
-https://developer.spotify.com/dashboard, add your origin as redirect URI (e.g.
-`https://fzero-delta.vercel.app/`), then either paste the Client ID via the menu's
-CONNECT SPOTIFY button (stored in localStorage) or set `VITE_SPOTIFY_CLIENT_ID` at
-build time. Scope: `user-read-currently-playing` only.
+Space (or the DASH button on mobile) spends a pip: half a second of surge with
+i-frames. Dash *through* shards and barriers to shatter them for score instead
+of taking damage. Pips come from musical play — on-beat gates and 5-ring
+chains — so aggression is funded by rhythm.
 
 ## Roguelite loop
 
-Run = a chain of procedurally generated sectors (seeded, ~3 km each) that get
-narrower, twistier, and more obstacle-dense. Clear a sector → draft 1 of 3 upgrades
-(thrusters, hull, shields, magnet, groove window, glass cannon…). Hull hits zero →
-run ends, scrap banks to localStorage.
+Run = a chain of procedurally generated sectors (seeded, ~3 km) that get
+narrower, twistier, and denser. Rings trace the racing line (chains pay bonus
+scrap); CORE pickups sit right beside hazards for risk/reward grabs. Clear a
+sector → warp tunnel → draft 1 of 3 upgrades (module-synergy cards appear when
+you've socketed the matching module). Hull hits zero → scrap banks.
+
+**Hangar** (from the title): five ships with stat trade-offs (STINGER free;
+JUGGERNAUT, RAZOR, METRONOME, PHANTOM priced in scrap) and nine one-time
+modules in DASH / TEMPO / SALVAGE families, socketed into 2–3 slots per ship.
 
 ## Controls
 
-W/↑ accelerate · A/D or ←/→ steer · S/↓ brake · Space/Shift boost · 1-3 pick
-upgrade · R retry · F3 audio debug overlay. Gamepad supported.
+W/↑ accelerate · A/D or ←/→ steer · S/↓ brake · **Space = pulse dash** ·
+1-3 pick upgrade · R retry · F3 audio debug overlay. Gamepad supported.
+Mobile: auto-accelerate, hold left/right half to steer, DASH/BRAKE buttons.
+
+## Spotify now-playing card (optional)
+
+Cosmetic track + album art card. Authorization Code + PKCE, no backend.
+Setup: create an app at https://developer.spotify.com/dashboard, add your
+origin as redirect URI (e.g. `https://fzero-delta.vercel.app/`), then paste
+the Client ID via the title's SPOTIFY button (stored in localStorage) or set
+`VITE_SPOTIFY_CLIENT_ID` at build time. Scope: `user-read-currently-playing`.
 
 ## Dev
 
@@ -53,5 +68,7 @@ npm run build  # tsc + vite build → dist/
 ```
 
 Vanilla TypeScript + Three.js, no framework. Ship physics is spline-space
-(distance-along + lateral offset) — see `src/ship/ship.ts` and `src/track/spline.ts`.
-Audio pipeline: `src/audio/capture.ts` → `analyser.ts` → `beat.ts` → `music-state.ts`.
+(distance-along + lateral offset) — `src/ship/ship.ts`, `src/track/spline.ts`.
+Audio pipeline: `src/audio/capture.ts` → `analyser.ts` → `beat.ts` →
+`music-state.ts`. Design language and the hard-gate art rubric live in
+`docs/design-language.md`; product principles in `PRODUCT.md`.

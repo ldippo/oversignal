@@ -59,7 +59,7 @@ A obstacle kit → B ring threads → C finish gate + warp → D sky → E track
 
 ## Deferred (explicitly out of this pass)
 
-- Two-tier collectibles (rare "core" pickups in risky spots)
-- Sweeping blade hazards synced to bars
-- Seamless sector stitch / drive-through upgrade lanes
-- Obstacle death/hit particle explosions (candidate to slip into A if cheap)
+- ~~Two-tier collectibles~~ — DONE: CORE pickups (+25 scrap, +10 hull) spawn beside hazards
+- ~~Obstacle death/hit particle explosions~~ — DONE: juice layer (fx/juice.ts)
+- Sweeping blade hazards synced to bars (still deferred: beat-jitter fairness risk)
+- Seamless sector stitch / drive-through upgrade lanes (still deferred: v2-scale)

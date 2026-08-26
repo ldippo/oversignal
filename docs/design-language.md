@@ -44,10 +44,11 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 |---|---|---|---|---|---|---|---|
 | Ship (all defs) | 4 | 3 | 4 | 4 | 4 | 4 | PASS — trails, dash streak/stretch, accent palette |
 | Beat gate | 5 | 3 | 4 | 4 | 4 | 5 | PASS — shockwave + burst + kick + float text |
-| Ring thread | 5 | 3 | 4 | 3 | 3 | 4 | PASS — sparks, chain strobe, float text |
+| Ring thread | 5 | 3 | 4 | 3 | 4 | 4 | PASS — beat-pulse scale, sparks, chain strobe |
+| Core pickup | 4 | 4 | 4 | 4 | 4 | 4 | PASS — halo ring, spin, beat pulse, burst + heal text |
 | Shard | 4 | 3 | 4 | 3 | 3 | 4 | PASS — idle spin, shatter burst + hitstop |
 | Barrier | 5 | 3 | 4 | 3 | 3 | 4 | PASS — beat pulse, hit vignette + hitstop |
-| Pulse fence | 4 | 4 | 4 | 4 | 5 | 4 | PASS — pass burst / damage vignette |
+| Pulse fence | 4 | 5 | 4 | 4 | 5 | 4 | PASS — scanline shimmer membrane |
 | Finish arch | 4 | 3 | 4 | 3 | 4 | 4 | PASS — shockwave + flash + warp entry |
 | Warp tunnel | 4 | 4 | 4 | 4 | 3 | 3 | PASS |
 | Sky/celestial | 3 | 4 | 4 | 3 | 4 | n/a | PASS |
@@ -56,11 +57,12 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 | Data spire | 4 | 4 | 4 | 3 | 3 | n/a | PASS — seam glow, idle rotation |
 | Transmission array | 4 | 4 | 4 | 3 | 4 | n/a | PASS — beat-blinking tip |
 | Ghost wireframe | 4 | 5 | 4 | 3 | 3 | n/a | PASS — flicker, pure signal |
-| Signal shard cluster | 3 | 4 | 4 | 3 | 3 | n/a | PASS — edge-lit, drift spin |
+| Signal shard cluster | 4 | 4 | 4 | 3 | 3 | n/a | PASS — dominant spire + shared-axis satellites |
 | Hero landmarks ×4 | 4 | 4 | 4 | 3 | 4 | n/a | PASS — energy-driven glow bands |
 
 Retired: box pylon, monolith, rock (replaced by kit).
-Known 3s to push in a future pass: signal fidelity on gameplay solids (scanline
-shader), ring reactivity, cluster silhouette.
+Juice is adaptive: all burst/kick/rumble intensity scales with music energy
+(0.55 in quiet passages → ~1.25 at full chorus); shockwaves and hitstop stay
+constant as marquee punctuation.
 
 Feedback is n/a for pure deco (no interaction); deco gates on the other five axes.
