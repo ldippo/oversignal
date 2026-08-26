@@ -145,8 +145,10 @@ function startSegment(): void {
   ship.speed = Math.min(ship.speed, 40);
   run.shields = run.mods.shieldPerSegment;
   camInit = false;
-  touch?.setVisible(true);
-  hud.flashBanner(`SECTOR ${run.segmentIndex + 1}`, 2);
+  if (state !== "menu") {
+    touch?.setVisible(true);
+    hud.flashBanner(`SECTOR ${run.segmentIndex + 1}`, 2);
+  }
 }
 
 function flash(): void {
@@ -267,6 +269,20 @@ const WALL_DPS = 16;
 
 const loop = new GameLoop(
   (dt) => {
+    // attract mode: the ship demos the track behind the title screen
+    if (state === "menu" && segment) {
+      elapsed += dt;
+      music.update(dt);
+      juice.update(dt);
+      ship.update(dt, { steer: Math.sin(elapsed * 0.25) * 0.35, accel: true, brake: false, dash: false }, 0.45);
+      if (ship.s >= segment.spline.length - 80) {
+        ship.s = 0;
+        ship.speed = 30;
+        camInit = false;
+      }
+      updateCamera(dt);
+      return;
+    }
     if (state === "warp") {
       elapsed += dt;
       music.update(dt);
@@ -453,6 +469,7 @@ function openMenu(): void {
 }
 
 hud.setVisible(false);
+startSegment(); // attract-mode world behind the title
 void handleRedirect()
   .catch(() => {}) // failed token exchange → menu just shows disconnected
   .then(openMenu);

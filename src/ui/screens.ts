@@ -9,55 +9,58 @@ export function showMenu(
   onStart: (kind: AudioSourceKind) => Promise<void>,
   onHangar: () => void,
 ): HTMLDivElement {
+  const hasTab = !!navigator.mediaDevices?.getDisplayMedia;
   const el = document.createElement("div");
-  el.className = "screen";
+  el.className = "title-screen";
   el.innerHTML = `
-    <h1>FZERO</h1>
-    <p>Anti-gravity roguelite racer that runs on your music.<br/>
-    Put Spotify (or anything) in another tab, then sync it here.</p>
-    <div class="stat">SCRAP ${save.scrap} · BEST ${save.bestScore} · RUNS ${save.totalRuns}</div>
-    <button class="secondary hangar-btn">HANGAR · SHIP: ${save.selectedShip.toUpperCase()}</button>
-    <button data-src="tab">SYNC TAB AUDIO</button>
-    <button data-src="mic" class="secondary">USE MICROPHONE</button>
-    <button data-src="silent" class="secondary">RUN SILENT (120 BPM)</button>
-    <p class="hint" style="font-size:13px;opacity:.6">Tab sync: pick the tab playing music and tick “Also share tab audio”.</p>
-    <div class="spotify-box">
-      <button class="secondary sp-main"></button>
-      <div class="sp-setup" style="display:none">
-        <p style="font-size:13px;opacity:.75;max-width:460px">
-          Optional now-playing HUD (track + album art). Create an app at
-          developer.spotify.com/dashboard, add redirect URI
-          <code>${window.location.origin}/</code>, then paste its Client ID:
-        </p>
-        <div class="sp-row">
-          <input class="sp-id" placeholder="Spotify Client ID" spellcheck="false" />
-          <button class="sp-save">CONNECT</button>
-        </div>
-      </div>
+    <div class="title-block">
+      <h1 class="wordmark">FZERO</h1>
+      <p class="tagline">RUNS ON YOUR MUSIC</p>
     </div>
-    <p class="err" style="color:#ff6a6a;min-height:1.2em"></p>
+    <div class="title-actions">
+      <button class="sync-btn" data-src="${hasTab ? "tab" : "mic"}">
+        <span>${hasTab ? "SYNC YOUR MUSIC" : "SYNC WITH MIC"}</span>
+      </button>
+      <p class="sync-hint">${hasTab ? "share the tab that’s playing — tick “also share tab audio”" : "hold your phone near the speaker"}</p>
+      <div class="alt-actions">
+        ${hasTab ? '<button class="alt" data-src="mic">use microphone</button><span class="dot">·</span>' : ""}
+        <button class="alt" data-src="silent">play without music</button>
+      </div>
+      <p class="err" role="alert"></p>
+    </div>
+    <div class="title-footer">
+      <span class="foot-stat">◆ ${save.scrap} SCRAP</span>
+      <span class="foot-stat">BEST ${save.bestScore.toLocaleString()}</span>
+      <span class="foot-spacer"></span>
+      <button class="foot-link hangar-btn">HANGAR — ${save.selectedShip.toUpperCase()}</button>
+      <button class="foot-link sp-main"></button>
+    </div>
+    <div class="sp-setup" hidden>
+      <p>Optional now-playing card. Create an app at
+        <strong>developer.spotify.com/dashboard</strong>, add redirect URI
+        <code>${window.location.origin}/</code>, paste its Client ID:</p>
+      <div class="sp-row">
+        <input class="sp-id" placeholder="Spotify Client ID" spellcheck="false" />
+        <button class="sp-save">CONNECT</button>
+      </div>
+      <button class="sp-close">close</button>
+    </div>
   `;
   parent.appendChild(el);
   const err = el.querySelector<HTMLParagraphElement>(".err")!;
-
-  // tab-audio capture doesn't exist on mobile browsers
-  if (!navigator.mediaDevices?.getDisplayMedia) {
-    el.querySelector<HTMLButtonElement>('button[data-src="tab"]')!.style.display = "none";
-    el.querySelector<HTMLParagraphElement>(".hint")!.textContent =
-      "On mobile: use the microphone near your speaker, or run silent.";
-  }
 
   el.querySelector<HTMLButtonElement>(".hangar-btn")!.addEventListener("click", () => {
     el.remove();
     onHangar();
   });
 
-  // Spotify now-playing (optional, cosmetic)
+  // Spotify now-playing (optional, cosmetic) — panel only appears on demand
   const spMain = el.querySelector<HTMLButtonElement>(".sp-main")!;
   const spSetup = el.querySelector<HTMLDivElement>(".sp-setup")!;
   const spId = el.querySelector<HTMLInputElement>(".sp-id")!;
   const refreshSpotify = () => {
-    spMain.textContent = isConnected() ? "SPOTIFY ✓ CONNECTED — CLICK TO DISCONNECT" : "CONNECT SPOTIFY (NOW-PLAYING HUD)";
+    spMain.textContent = isConnected() ? "SPOTIFY ✓" : "SPOTIFY";
+    spMain.title = isConnected() ? "Connected — click to disconnect" : "Connect for the now-playing card";
   };
   refreshSpotify();
   spMain.addEventListener("click", () => {
@@ -68,13 +71,16 @@ export function showMenu(
     } else if (getClientId()) {
       void beginAuth().catch((e) => { err.textContent = String(e); });
     } else {
-      spSetup.style.display = spSetup.style.display === "none" ? "" : "none";
+      spSetup.hidden = !spSetup.hidden;
     }
   });
   el.querySelector<HTMLButtonElement>(".sp-save")!.addEventListener("click", () => {
     if (!spId.value.trim()) return;
     setClientId(spId.value);
     void beginAuth().catch((e) => { err.textContent = String(e); });
+  });
+  el.querySelector<HTMLButtonElement>(".sp-close")!.addEventListener("click", () => {
+    spSetup.hidden = true;
   });
 
   el.querySelectorAll<HTMLButtonElement>("button[data-src]").forEach((btn) => {

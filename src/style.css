@@ -3,7 +3,8 @@
   --hud-magenta: #ff3ec8;
   --hud-amber: #ffc44e;
   --hud-bg: rgba(4, 8, 20, 0.72);
-  --hud-font: "Segoe UI", system-ui, sans-serif;
+  --hud-font: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --display-font: "Michroma", "Chakra Petch", sans-serif;
 }
 
 * {
@@ -617,6 +618,274 @@ body {
   box-shadow: none;
 }
 
+/* ---------- Title screen (brand register: game runs behind it) ---------- */
+
+.title-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.title-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, rgba(3, 4, 10, 0.55) 0%, transparent 32%),
+    linear-gradient(to top, rgba(3, 4, 10, 0.85) 0%, transparent 38%);
+  pointer-events: none;
+}
+
+.title-screen button {
+  pointer-events: auto;
+}
+
+.title-block {
+  position: relative;
+  margin-top: 16vh;
+  text-align: center;
+  animation: title-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.wordmark {
+  font-family: var(--display-font);
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  margin-right: -0.22em; /* recenter tracked text */
+  color: #fff;
+  text-shadow:
+    0 0 12px rgba(78, 243, 255, 0.9),
+    0 0 46px rgba(78, 243, 255, 0.45),
+    0 0 90px rgba(255, 62, 200, 0.3);
+}
+
+.tagline {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  margin-right: -0.42em;
+  color: rgba(78, 243, 255, 0.9);
+}
+
+.title-actions {
+  position: relative;
+  margin-top: auto;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: title-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.sync-btn {
+  font-family: var(--hud-font);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 19px 52px;
+  color: #04101c;
+  background: var(--hud-cyan);
+  border: none;
+  cursor: pointer;
+  transform: skewX(-12deg);
+  box-shadow:
+    0 0 22px rgba(78, 243, 255, 0.55),
+    0 0 70px rgba(78, 243, 255, 0.25);
+  animation: sync-pulse 1s ease-in-out infinite;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s;
+}
+
+.sync-btn > span {
+  display: inline-block;
+  transform: skewX(12deg);
+}
+
+.sync-btn:hover {
+  background: #8bf8ff;
+  transform: skewX(-12deg) scale(1.04);
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  animation: none;
+}
+
+@keyframes sync-pulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(78, 243, 255, 0.55), 0 0 70px rgba(78, 243, 255, 0.25); }
+  50% { box-shadow: 0 0 30px rgba(78, 243, 255, 0.85), 0 0 95px rgba(78, 243, 255, 0.4); }
+}
+
+.sync-hint {
+  font-size: 13px;
+  color: rgba(232, 246, 255, 0.72);
+  letter-spacing: 0.04em;
+}
+
+.alt-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.alt-actions .dot {
+  color: rgba(232, 246, 255, 0.4);
+}
+
+.alt {
+  font-family: var(--hud-font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 4px; /* invisible padding keeps touch targets ≥44px tall */
+  background: none;
+  border: none;
+  color: rgba(232, 246, 255, 0.78);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(232, 246, 255, 0.25);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.alt:hover {
+  color: var(--hud-cyan);
+  border-color: var(--hud-cyan);
+}
+
+.title-actions .err {
+  color: #ff8a8a;
+  font-size: 13px;
+  min-height: 1.2em;
+  max-width: 70vw;
+  text-align: center;
+}
+
+.title-footer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 18px 34px 22px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(232, 246, 255, 0.8);
+  animation: title-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+.foot-stat {
+  color: rgba(255, 196, 78, 0.9);
+}
+
+.foot-spacer {
+  flex: 1;
+}
+
+.foot-link {
+  font-family: var(--hud-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 12px 16px;
+  background: none;
+  border: 1px solid rgba(78, 243, 255, 0.35);
+  border-radius: 3px;
+  color: var(--hud-cyan);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.foot-link:hover {
+  border-color: var(--hud-cyan);
+  box-shadow: 0 0 14px rgba(78, 243, 255, 0.35);
+}
+
+.sp-setup {
+  position: absolute;
+  left: 50%;
+  bottom: 90px;
+  transform: translateX(-50%);
+  width: min(460px, 90vw);
+  padding: 20px;
+  background: var(--hud-bg);
+  border: 1px solid rgba(78, 243, 255, 0.35);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.sp-setup[hidden] {
+  display: none;
+}
+
+.sp-setup .sp-save {
+  font-family: var(--hud-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 10px 18px;
+  color: #04101c;
+  background: var(--hud-cyan);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.sp-setup p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(232, 246, 255, 0.85);
+}
+
+.sp-setup code {
+  color: var(--hud-cyan);
+  font-size: 12px;
+}
+
+.sp-close {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: rgba(232, 246, 255, 0.6);
+  font-family: var(--hud-font);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px;
+}
+
+@keyframes title-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-block,
+  .title-actions,
+  .title-footer {
+    animation: title-fade 0.4s ease-out both;
+  }
+  .sync-btn {
+    animation: none;
+  }
+  @keyframes title-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
 /* ---------- Mobile sizing (keep last: overrides base at equal specificity) ---------- */
 
 @media (max-width: 760px) {
@@ -637,4 +906,10 @@ body {
   .meta-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 12px; }
   .now-playing { max-width: 250px; bottom: 12px; }
   .sp-row input { width: 60vw; }
+  .title-block { margin-top: 11vh; }
+  .tagline { font-size: 11px; }
+  .sync-btn { font-size: 16px; padding: 16px 34px; }
+  .sync-hint { max-width: 80vw; text-align: center; }
+  .title-footer { flex-wrap: wrap; gap: 10px 16px; padding: 12px 18px 16px; justify-content: center; }
+  .foot-spacer { display: none; }
 }
