@@ -18,6 +18,7 @@ import { moduleById } from "./game/modules";
 import { showUpgradeDraft } from "./ui/screens";
 import { showHangar } from "./ui/hangar";
 import { attachInput, readInput } from "./ship/input";
+import { TouchControls, isTouchDevice } from "./ship/touch";
 import { Run } from "./game/run";
 import { Hud } from "./ui/hud";
 import { MusicState } from "./audio/music-state";
@@ -31,7 +32,7 @@ import { handleRedirect } from "./audio/spotify";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isTouchDevice() ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 const scene = new THREE.Scene();
@@ -104,6 +105,8 @@ const audioDebug = new AudioDebug(ui);
 const nowPlaying = new NowPlayingHud(ui);
 const juice = new Juice(scene, ui);
 const trails = new ShipTrails(scene, 0x4ef3ff);
+const touch = isTouchDevice() ? new TouchControls(ui) : null;
+touch?.setVisible(false);
 let currentTheme = themeFor(0);
 let overlay: HTMLDivElement | null = null;
 
@@ -142,6 +145,7 @@ function startSegment(): void {
   ship.speed = Math.min(ship.speed, 40);
   run.shields = run.mods.shieldPerSegment;
   camInit = false;
+  touch?.setVisible(true);
   hud.flashBanner(`SECTOR ${run.segmentIndex + 1}`, 2);
 }
 
@@ -156,6 +160,7 @@ function finishSegment(): void {
   run.segmentIndex++;
   run.addScore(500);
   state = "warp";
+  touch?.setVisible(false);
   flash();
   hud.flashBanner("SECTOR CLEAR", 1.5);
   juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 40);
@@ -176,6 +181,7 @@ function finishSegment(): void {
 
 function gameOver(): void {
   state = "gameover";
+  touch?.setVisible(false);
   const payout = run.payout();
   bankRun(save, payout, run.score);
   overlay = document.createElement("div");

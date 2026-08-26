@@ -40,6 +40,13 @@ export function showMenu(
   parent.appendChild(el);
   const err = el.querySelector<HTMLParagraphElement>(".err")!;
 
+  // tab-audio capture doesn't exist on mobile browsers
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    el.querySelector<HTMLButtonElement>('button[data-src="tab"]')!.style.display = "none";
+    el.querySelector<HTMLParagraphElement>(".hint")!.textContent =
+      "On mobile: use the microphone near your speaker, or run silent.";
+  }
+
   el.querySelector<HTMLButtonElement>(".hangar-btn")!.addEventListener("click", () => {
     el.remove();
     onHangar();

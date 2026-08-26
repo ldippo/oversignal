@@ -5,6 +5,8 @@ export interface InputState {
   dash: boolean; // edge-triggered: true only on the frame the button was pressed
 }
 
+import { getTouchState, consumeTouchDash } from "./touch";
+
 const keys = new Set<string>();
 let dashQueued = false;
 let padDashHeld = false;
@@ -49,6 +51,14 @@ export function readInput(): InputState {
   if (keys.has("KeyA") || keys.has("ArrowLeft")) state.steer -= 1;
   if (keys.has("KeyD") || keys.has("ArrowRight")) state.steer += 1;
   pollGamepad(state);
+  const touch = getTouchState();
+  if (touch.active) {
+    state.steer += touch.steer;
+    state.brake = state.brake || touch.brake;
+    if (consumeTouchDash()) state.dash = true;
+    // touch mode auto-accelerates; brake overrides
+    if (!touch.brake) state.accel = true;
+  }
   state.steer = Math.max(-1, Math.min(1, state.steer));
   return state;
 }

@@ -20,6 +20,10 @@ body {
   background: #030308;
   font-family: var(--hud-font);
   color: #e8f6ff;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game {
@@ -38,6 +42,71 @@ body {
 
 #ui > * {
   pointer-events: auto;
+}
+
+/* ---------- Touch controls ---------- */
+
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.steer-zone {
+  position: absolute;
+  bottom: 0;
+  top: 30%;
+  width: 34%;
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 130px;
+  color: rgba(78, 243, 255, 0.25);
+  font-size: 40px;
+  transition: color 0.1s;
+}
+
+.steer-zone.held {
+  color: rgba(78, 243, 255, 0.7);
+}
+
+.steer-left { left: 0; }
+.steer-right { right: 0; }
+
+.touch-btn {
+  position: absolute;
+  bottom: 100px;
+  pointer-events: auto;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 2px solid var(--hud-cyan);
+  background: rgba(10, 20, 44, 0.55);
+  color: var(--hud-cyan);
+  font-family: var(--hud-font);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  touch-action: none;
+}
+
+.touch-btn:active {
+  background: rgba(78, 243, 255, 0.35);
+}
+
+.touch-dash {
+  right: 26px;
+  border-color: var(--hud-magenta);
+  color: var(--hud-magenta);
+}
+
+.touch-brake {
+  left: 26px;
+  width: 68px;
+  height: 68px;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 /* ---------- HUD ---------- */
@@ -546,4 +615,26 @@ body {
   color: var(--hud-cyan);
   border: 1px solid var(--hud-cyan);
   box-shadow: none;
+}
+
+/* ---------- Mobile sizing (keep last: overrides base at equal specificity) ---------- */
+
+@media (max-width: 760px) {
+  .hud-speed { font-size: 32px; bottom: 16px; right: 18px; }
+  .hud-hull { width: 150px; left: 18px; bottom: 20px; }
+  .hud-pips { left: 18px; bottom: 40px; }
+  .hud-seg { font-size: 14px; top: 12px; left: 18px; letter-spacing: 2px; }
+  .hud-score { font-size: 18px; top: 12px; right: 18px; }
+  .hud-combo { font-size: 24px; bottom: 64px; right: 22px; }
+  .hud-banner { font-size: 26px; letter-spacing: 4px; }
+  .screen h1 { font-size: 40px; letter-spacing: 6px; }
+  .screen h2 { font-size: 22px; }
+  .screen p { font-size: 14px; max-width: 88vw; }
+  .screen .cards { flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+  .screen .card { width: 82vw; padding: 12px 14px; }
+  .hangar-ships { gap: 8px; max-height: 30vh; overflow-y: auto; }
+  .hangar-ships .ship-card { width: 44vw; padding: 10px; }
+  .meta-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 12px; }
+  .now-playing { max-width: 250px; bottom: 12px; }
+  .sp-row input { width: 60vw; }
 }
