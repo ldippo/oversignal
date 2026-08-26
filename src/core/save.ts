@@ -1,4 +1,5 @@
 import { META_TRACKS, tierCost, type MetaTrackId } from "../game/meta";
+import type { DailyResult } from "../game/daily";
 
 export interface SaveData {
   v: number;
@@ -9,6 +10,7 @@ export interface SaveData {
   selectedShip: string;
   ownedModules: string[];
   loadouts: Record<string, string[]>; // shipId -> socketed module ids
+  daily: DailyResult | null; // today's (or last played) daily run
 }
 
 const KEY = "fzero-save-v1";
@@ -22,6 +24,7 @@ const DEFAULTS: SaveData = {
   selectedShip: "stinger",
   ownedModules: [],
   loadouts: {},
+  daily: null,
 };
 
 interface LegacySave extends Partial<SaveData> {

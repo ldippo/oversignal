@@ -111,12 +111,12 @@ export const UPGRADE_POOL: Upgrade[] = [
   },
 ];
 
-/** Pick n distinct upgrades. Plain Math.random — draft luck isn't part of the seed. */
-export function draftUpgrades(run: Run, n = 3): Upgrade[] {
+/** Pick n distinct upgrades. Daily mode passes a seeded rand for fair drafts. */
+export function draftUpgrades(run: Run, n = 3, rand: () => number = Math.random): Upgrade[] {
   const pool = UPGRADE_POOL.filter((u) => !u.requires || u.requires(run));
   const picks: Upgrade[] = [];
   while (picks.length < n && pool.length > 0) {
-    picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    picks.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
   }
   return picks;
 }

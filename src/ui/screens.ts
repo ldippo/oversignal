@@ -2,6 +2,7 @@ import type { AudioSourceKind } from "../audio/capture";
 import type { SaveData } from "../core/save";
 import type { Upgrade } from "../game/upgrades";
 import { beginAuth, disconnect, getClientId, isConnected, setClientId } from "../audio/spotify";
+import { playedToday, shareText, todayUTC } from "../game/daily";
 
 export function showMenu(
   parent: HTMLElement,
@@ -9,7 +10,9 @@ export function showMenu(
   onStart: (kind: AudioSourceKind | "keep") => Promise<void>,
   onHangar: () => void,
   hasAudio = false,
+  onDaily?: () => void,
 ): HTMLDivElement {
+  const dailyDone = playedToday(save);
   const hasTab = !!navigator.mediaDevices?.getDisplayMedia;
   const primarySrc = hasAudio ? "keep" : hasTab ? "tab" : "mic";
   const primaryLabel = hasAudio ? "START RUN" : hasTab ? "SYNC YOUR MUSIC" : "SYNC WITH MIC";
@@ -37,6 +40,12 @@ export function showMenu(
       <div class="alt-actions">
         ${alts.join('<span class="dot">·</span>')}
       </div>
+      <button class="daily-btn">
+        <span>${dailyDone ? `DAILY ✓ ${save.daily!.score.toLocaleString()} — SHARE` : `DAILY RUN · ${todayUTC()}`}</span>
+      </button>
+      <p class="daily-hint">${dailyDone
+        ? "same track for everyone — next run at 00:00 UTC"
+        : "one attempt · stock ship · same track for everyone"}</p>
       <p class="err" role="alert"></p>
     </div>
     <div class="title-footer">
@@ -63,6 +72,17 @@ export function showMenu(
   el.querySelector<HTMLButtonElement>(".hangar-btn")!.addEventListener("click", () => {
     el.remove();
     onHangar();
+  });
+
+  const dailyBtn = el.querySelector<HTMLButtonElement>(".daily-btn")!;
+  dailyBtn.addEventListener("click", () => {
+    if (dailyDone) {
+      if (save.daily) void navigator.clipboard.writeText(shareText(save.daily)).catch(() => {});
+      dailyBtn.querySelector("span")!.textContent = "COPIED ✓";
+    } else if (onDaily) {
+      el.remove();
+      onDaily();
+    }
   });
 
   // Spotify now-playing (optional, cosmetic) — panel only appears on demand

@@ -883,6 +883,38 @@ body {
   border-color: var(--hud-cyan);
 }
 
+.daily-btn {
+  font-family: var(--hud-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 12px 26px;
+  margin-top: 14px;
+  color: var(--hud-amber);
+  background: rgba(255, 196, 78, 0.08);
+  border: 1px solid rgba(255, 196, 78, 0.5);
+  cursor: pointer;
+  transform: skewX(-12deg);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.daily-btn > span {
+  display: inline-block;
+  transform: skewX(12deg);
+}
+
+.daily-btn:hover {
+  border-color: var(--hud-amber);
+  background: rgba(255, 196, 78, 0.16);
+  box-shadow: 0 0 16px rgba(255, 196, 78, 0.35);
+}
+
+.daily-hint {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: rgba(232, 246, 255, 0.55);
+}
+
 .title-actions .err {
   color: #ff8a8a;
   font-size: 13px;

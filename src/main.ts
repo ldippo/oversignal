@@ -2,7 +2,9 @@ import * as THREE from "three";
 import { GameLoop } from "./core/loop";
 import { makeFrame } from "./track/spline";
 import { buildTrackMesh, disposeGroup } from "./track/mesh";
-import { generateSegment, type Segment } from "./track/generator";
+import { generateSegment, mulberry32, type Segment } from "./track/generator";
+import { dailySeed, todayUTC, shareText } from "./game/daily";
+import { persistSave } from "./core/save";
 import { FeatureField } from "./track/features";
 import { PostFx } from "./fx/post";
 import { themeFor } from "./fx/palette";
@@ -93,6 +95,7 @@ let wasDropActive = false;
 let fenceOpenNow = false;
 let ringChain = 0;
 let chainForgive = 0;
+let dailyMode = false;
 
 const ship = new Ship(generateSegment({ seed: 1, difficulty: 0 }).spline, 14);
 scene.add(ship.object);
@@ -127,10 +130,10 @@ function startSegment(): void {
     edgeColorRight: theme.edgeRight,
   });
   scene.add(trackGroup);
-  features = new FeatureField(segment, theme, {
-    beatConfidence: music.beatConfidence,
-    bpm: music.bpm,
-  });
+  // daily runs force a deterministic layout: same fences/rings for everyone
+  features = new FeatureField(segment, theme, dailyMode
+    ? { beatConfidence: 1, bpm: 120 }
+    : { beatConfidence: music.beatConfidence, bpm: music.bpm });
   scene.add(features.group);
   scene.fog = new THREE.Fog(theme.fog, 60, 650);
   scene.background = new THREE.Color(theme.background);
@@ -172,7 +175,8 @@ function finishSegment(): void {
   if (trackGroup) { disposeGroup(trackGroup); trackGroup = null; }
   if (features) { disposeGroup(features.group); features = null; }
   warp = new WarpTunnel(scene, ship.object, themeFor(run.segmentIndex - 1));
-  showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(run, 3), (u) => {
+  const draftRand = dailyMode ? mulberry32((run.seed ^ (run.segmentIndex * 0x51ed270b)) >>> 0) : Math.random;
+  showUpgradeDraft(ui, run.segmentIndex, draftUpgrades(run, 3, draftRand), (u) => {
     u.apply(run, ship);
     warp?.dispose();
     warp = null;
@@ -192,12 +196,21 @@ function gameOver(): void {
   const prevBest = save.bestScore;
   bankRun(save, payout, run.score);
   const newBest = Math.floor(run.score) > prevBest;
+  if (dailyMode && save.daily) {
+    save.daily = {
+      date: save.daily.date,
+      score: Math.floor(run.score),
+      sector: run.segmentIndex + 1,
+      bestCombo: run.bestCombo,
+    };
+    persistSave(save);
+  }
   overlay = document.createElement("div");
   overlay.className = "end-screen";
   overlay.innerHTML = `
     <div class="end-block">
       <h2 class="end-title">SIGNAL LOST</h2>
-      <p class="end-sub">${newBest ? "NEW BEST RUN" : `SECTOR ${run.segmentIndex + 1}`}</p>
+      <p class="end-sub">${dailyMode ? "DAILY RUN COMPLETE" : newBest ? "NEW BEST RUN" : `SECTOR ${run.segmentIndex + 1}`}</p>
     </div>
     <div class="end-actions">
       <div class="end-payout">+${payout} <span>SCRAP</span></div>
@@ -207,13 +220,23 @@ function gameOver(): void {
         <span>COMBO ×${run.bestCombo}</span>
         <span>◆ ${save.scrap} BANKED</span>
       </div>
-      <button class="retry-btn"><span>RETRY</span></button>
+      ${dailyMode
+        ? '<button class="retry-btn share-btn"><span>SHARE RESULT</span></button>'
+        : '<button class="retry-btn"><span>RETRY</span></button>'}
       <button class="alt end-menu">back to title</button>
     </div>
     <div class="end-footer"></div>
   `;
   ui.appendChild(overlay);
-  overlay.querySelector(".retry-btn")!.addEventListener("click", restart);
+  if (dailyMode) {
+    const btn = overlay.querySelector<HTMLButtonElement>(".share-btn")!;
+    btn.addEventListener("click", () => {
+      if (save.daily) void navigator.clipboard.writeText(shareText(save.daily)).catch(() => {});
+      btn.querySelector("span")!.textContent = "COPIED ✓";
+    });
+  } else {
+    overlay.querySelector(".retry-btn")!.addEventListener("click", restart);
+  }
   overlay.querySelector(".end-menu")!.addEventListener("click", returnToTitle);
 }
 
@@ -246,7 +269,7 @@ function restart(): void {
 }
 
 window.addEventListener("keydown", (e) => {
-  if (e.code === "KeyR" && state === "gameover") restart();
+  if (e.code === "KeyR" && state === "gameover" && !dailyMode) restart();
 });
 
 // ---------- camera ----------
@@ -484,6 +507,7 @@ function openMenu(): void {
     save,
     async (kind) => {
       if (kind !== "keep") await pickAudio(kind);
+      dailyMode = false;
       hud.setVisible(true);
       nowPlaying.startPolling();
       run = newRun();
@@ -492,11 +516,26 @@ function openMenu(): void {
     },
     () => showHangar(ui, save, openMenu),
     music.sourceLabel !== "none",
+    startDaily,
   );
+}
+
+/** One attempt/day, stock STINGER, shared seed — pure skill comparison. */
+function startDaily(): void {
+  dailyMode = true;
+  ship.setDef(shipById("stinger"));
+  run = new Run(dailySeed(todayUTC()));
+  save.daily = { date: todayUTC(), score: 0, sector: 1, bestCombo: 0 };
+  persistSave(save); // marked at start: quitting mid-run burns the attempt
+  hud.setVisible(true);
+  nowPlaying.startPolling();
+  state = "run";
+  startSegment();
 }
 
 /** Back to the attract-mode title without dropping the audio capture. */
 function returnToTitle(): void {
+  dailyMode = false;
   overlay?.remove();
   overlay = null;
   state = "menu";
