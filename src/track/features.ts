@@ -3,6 +3,7 @@ import { mulberry32 } from "./generator";
 import type { Segment } from "./generator";
 import { makeFrame } from "./spline";
 import type { SectorTheme } from "../fx/palette";
+import { dataSpire, transmissionArray, ghostWireframe, shardCluster, heroLandmark } from "../fx/deco";
 
 /**
  * Shape = verb grammar (docs/art-direction.md):
@@ -133,7 +134,11 @@ export class FeatureField {
   private nextIdx = 0;
   private gateMeshes: THREE.Group[] = [];
   private fenceMeshes: THREE.Mesh[] = [];
-  private rocks: THREE.Mesh[] = [];
+  private spinners: THREE.Object3D[] = [];
+  private arrayTips: THREE.MeshBasicMaterial[] = [];
+  private ghosts: THREE.LineBasicMaterial[] = [];
+  private ghostPhases: number[] = [];
+  private heroGlow: THREE.MeshBasicMaterial | null = null;
   private arch: THREE.Group | null = null;
 
   constructor(segment: Segment, theme: SectorTheme, opts: FeatureOptions) {
@@ -260,50 +265,44 @@ export class FeatureField {
       }
     }
 
-    // trackside diorama: pylons, monolith silhouettes, floating rocks
-    for (let s = 150, side = 1; s < spline.length - 100; s += 110, side = -side) {
-      const pylon = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6, 18, 0.6),
-        new THREE.MeshBasicMaterial({ color: side < 0 ? theme.edgeLeft : theme.edgeRight }),
-      );
-      pylon.userData.lift = 9;
-      deco(pylon, s, side * (halfWidth + 8));
+    // trackside signal architecture (docs/design-language.md)
+    for (let s = 160, side = 1; s < spline.length - 100; s += 130 + rand() * 60, side = -side) {
+      if (rand() < 0.5) {
+        const spire = dataSpire(rand, theme);
+        spire.userData.lift = 0;
+        this.spinners.push(spire);
+        deco(spire, s, side * (halfWidth + 16 + rand() * 14));
+      } else {
+        const cluster = shardCluster(rand, theme);
+        cluster.userData.lift = 8 + rand() * 18;
+        this.spinners.push(cluster);
+        deco(cluster, s, side * (26 + rand() * 26));
+      }
     }
-    for (let s = 250; s < spline.length - 100; s += 380 + rand() * 160) {
-      const side = rand() < 0.5 ? -1 : 1;
-      const w = 18 + rand() * 26;
-      const h = 55 + rand() * 70;
-      const mono = new THREE.Group();
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, w * 0.7),
-        new THREE.MeshStandardMaterial({ color: 0x05050c, roughness: 0.9, metalness: 0.2 }),
-      );
-      body.position.y = h / 2 - 10;
-      mono.add(body);
-      const strip = new THREE.Mesh(
-        new THREE.BoxGeometry(w * 0.08, h * 0.6, 0.4),
-        new THREE.MeshBasicMaterial({ color: theme.gate }),
-      );
-      strip.position.set(w * 0.2, h * 0.45 - 10, w * 0.36);
-      mono.add(strip);
-      deco(mono, s, side * (70 + rand() * 90));
+    for (let s = 300; s < spline.length - 100; s += 320 + rand() * 140) {
+      const arr = transmissionArray(rand, theme);
+      arr.userData.lift = 0;
+      this.arrayTips.push(arr.userData.tip as THREE.MeshBasicMaterial);
+      deco(arr, s, (rand() < 0.5 ? -1 : 1) * (38 + rand() * 30));
     }
-    for (let s = 200; s < spline.length - 100; s += 160 + rand() * 80) {
-      const rock = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(2.5 + rand() * 3.5, 0),
-        new THREE.MeshStandardMaterial({ color: 0x0a0d1a, roughness: 0.85, metalness: 0.3 }),
-      );
-      rock.userData.lift = 8 + rand() * 20;
-      rock.userData.spin = (rand() - 0.5) * 0.5;
-      this.rocks.push(rock);
-      deco(rock, s, (rand() < 0.5 ? -1 : 1) * (25 + rand() * 28));
+    for (let s = 400; s < spline.length; s += 520 + rand() * 260) {
+      const ghost = ghostWireframe(rand, theme);
+      ghost.userData.lift = 30 + rand() * 60;
+      this.ghosts.push(ghost.userData.ghost as THREE.LineBasicMaterial);
+      this.ghostPhases.push(ghost.userData.ghostPhase as number);
+      deco(ghost, s, (rand() < 0.5 ? -1 : 1) * (170 + rand() * 140));
     }
+    // hero landmark: one per segment, parked on the horizon at the midpoint
+    const hero = heroLandmark(rand, theme);
+    hero.userData.lift = 110 + rand() * 60;
+    this.heroGlow = hero.userData.hero as THREE.MeshBasicMaterial;
+    deco(hero, spline.length * 0.5, (rand() < 0.5 ? -1 : 1) * 620);
 
     this.features.sort((a, b) => a.s - b.s);
   }
 
   /** fenceOpen: whether the beat window is currently open (main computes once per frame). */
-  animate(beatPulse: number, time: number, fenceOpen: boolean): void {
+  animate(beatPulse: number, time: number, fenceOpen: boolean, energy = 0.5): void {
     const scale = 1 + beatPulse * 0.12;
     for (const g of this.gateMeshes) g.scale.set(scale, scale, 1);
     if (this.arch) {
@@ -316,11 +315,24 @@ export class FeatureField {
       f.scale.y = fenceOpen ? 0.12 : 1;
     }
     for (const f of this.features) {
-      if (f.kind === "ring" && !f.taken) f.mesh.rotation.z = time * 1.5;
+      if (f.taken) continue;
+      if (f.kind === "ring") f.mesh.rotation.z = time * 1.5;
+      else if (f.kind === "shard") f.mesh.rotation.y = time * 0.6 + f.s; // corrupted-signal idle spin
+      else if (f.kind === "barrier") f.mesh.scale.y = 1 + beatPulse * 0.07;
     }
-    for (const r of this.rocks) {
-      r.rotation.x += r.userData.spin * 0.016;
-      r.rotation.y += r.userData.spin * 0.011;
+    for (const s of this.spinners) {
+      s.rotation.y += (s.userData.spin as number) * 0.016;
+    }
+    for (const tip of this.arrayTips) {
+      if (!tip.userData.base) tip.userData.base = tip.color.clone();
+      tip.color.copy(tip.userData.base as THREE.Color).multiplyScalar(0.5 + beatPulse * 0.9);
+    }
+    for (let i = 0; i < this.ghosts.length; i++) {
+      const flicker = Math.sin(time * 3.1 + this.ghostPhases[i]) > 0.96 ? 0.14 : 0;
+      this.ghosts[i].opacity = 0.1 + flicker;
+    }
+    if (this.heroGlow) {
+      this.heroGlow.opacity = 0.3 + energy * 0.4 + beatPulse * 0.12;
     }
   }
 

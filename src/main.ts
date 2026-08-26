@@ -411,7 +411,7 @@ const loop = new GameLoop(
   },
   (_, ) => {
     environment.update(music, ship.object.position);
-    features?.animate(music.beatPulse, elapsed, fenceOpenNow);
+    features?.animate(music.beatPulse, elapsed, fenceOpenNow, music.energy);
     trails.update(
       ship.object,
       ship.speed / ship.stats.maxSpeed,

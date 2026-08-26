@@ -42,25 +42,25 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 
 | Element | Silh | Signal | Palette | Motion | React | Feedback | Gate |
 |---|---|---|---|---|---|---|---|
-| Ship (all defs) | 4 | 2 | 4 | 3 | 2 | 2 | FAIL — needs trails, dash state, signal materials |
-| Beat gate | 5 | 3 | 4 | 4 | 4 | 3 | FAIL — pass-through needs world+UI layers |
-| Ring thread | 5 | 3 | 4 | 3 | 2 | 2 | FAIL — collect needs sparks + floating score |
-| Shard | 4 | 3 | 4 | 1 | 1 | 2 | FAIL — needs idle jitter, glitch, shatter fx |
-| Barrier | 5 | 3 | 4 | 1 | 1 | 2 | FAIL — needs hazard motion + hit response |
-| Pulse fence | 4 | 4 | 4 | 4 | 5 | 2 | FAIL — pass/hit needs layered response |
-| Finish arch | 4 | 3 | 4 | 3 | 4 | 3 | FAIL — crossing moment needs more than flash |
-| Warp tunnel | 4 | 4 | 4 | 4 | 3 | 3 | PASS (marginal) |
-| Pylon | 3 | 2 | 4 | 1 | 1 | n/a | FAIL — replace with kit |
-| Monolith | 2 | 1 | 3 | 1 | 1 | n/a | FAIL — replace with kit |
-| Rock | 2 | 1 | 2 | 3 | 1 | n/a | FAIL — replace with shard cluster |
+| Ship (all defs) | 4 | 3 | 4 | 4 | 4 | 4 | PASS — trails, dash streak/stretch, accent palette |
+| Beat gate | 5 | 3 | 4 | 4 | 4 | 5 | PASS — shockwave + burst + kick + float text |
+| Ring thread | 5 | 3 | 4 | 3 | 3 | 4 | PASS — sparks, chain strobe, float text |
+| Shard | 4 | 3 | 4 | 3 | 3 | 4 | PASS — idle spin, shatter burst + hitstop |
+| Barrier | 5 | 3 | 4 | 3 | 3 | 4 | PASS — beat pulse, hit vignette + hitstop |
+| Pulse fence | 4 | 4 | 4 | 4 | 5 | 4 | PASS — pass burst / damage vignette |
+| Finish arch | 4 | 3 | 4 | 3 | 4 | 4 | PASS — shockwave + flash + warp entry |
+| Warp tunnel | 4 | 4 | 4 | 4 | 3 | 3 | PASS |
 | Sky/celestial | 3 | 4 | 4 | 3 | 4 | n/a | PASS |
-| HUD | 4 | 3 | 4 | 3 | 3 | 3 | PASS (marginal) |
-| Dash fx | NEW | | | | | | |
-| Juice (per event) | NEW | | | | | | |
-| Data spire | NEW | | | | | | |
-| Transmission array | NEW | | | | | | |
-| Ghost wireframe | NEW | | | | | | |
-| Signal shard cluster | NEW | | | | | | |
-| Hero landmarks ×4 | NEW | | | | | | |
+| HUD (incl. pips) | 4 | 3 | 4 | 3 | 3 | 3 | PASS |
+| Dash fx | 5 | 4 | 4 | 5 | 3 | 5 | PASS — streak stretch, burst, kick, blazing trails |
+| Data spire | 4 | 4 | 4 | 3 | 3 | n/a | PASS — seam glow, idle rotation |
+| Transmission array | 4 | 4 | 4 | 3 | 4 | n/a | PASS — beat-blinking tip |
+| Ghost wireframe | 4 | 5 | 4 | 3 | 3 | n/a | PASS — flicker, pure signal |
+| Signal shard cluster | 3 | 4 | 4 | 3 | 3 | n/a | PASS — edge-lit, drift spin |
+| Hero landmarks ×4 | 4 | 4 | 4 | 3 | 4 | n/a | PASS — energy-driven glow bands |
+
+Retired: box pylon, monolith, rock (replaced by kit).
+Known 3s to push in a future pass: signal fidelity on gameplay solids (scanline
+shader), ring reactivity, cluster silhouette.
 
 Feedback is n/a for pure deco (no interaction); deco gates on the other five axes.
