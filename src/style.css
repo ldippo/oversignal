@@ -663,6 +663,18 @@ body {
   color: rgba(255, 196, 78, 0.95);
 }
 
+.preview-slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: -8px 0;
+  animation: title-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+.ship-preview {
+  filter: drop-shadow(0 0 22px rgba(78, 243, 255, 0.25));
+}
+
 .hangar-ships {
   position: relative;
   display: flex;
@@ -1824,6 +1836,7 @@ body {
   .screen .cards { flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
   .screen .card { width: 82vw; padding: 12px 14px; }
   .hangar-screen { padding: 4vh 12px 3vh; gap: 12px; }
+  .ship-preview { width: 220px !important; height: 124px !important; }
   .hangar-ships { gap: 8px; max-height: 32vh; overflow-y: auto; }
   .hangar-ships .ship-card { width: calc(50% - 6px); padding: 10px; }
   .meta-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 12px; }

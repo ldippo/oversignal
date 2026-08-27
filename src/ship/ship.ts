@@ -23,7 +23,7 @@ const DASH_DURATION = 0.5;
 
 const HOVER_HEIGHT = 1.1;
 
-function buildShipMesh(def: ShipDef): THREE.Group {
+export function buildShipMesh(def: ShipDef): THREE.Group {
   const group = new THREE.Group();
   const [sx, sy, sz] = def.bodyScale;
 

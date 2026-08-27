@@ -1,6 +1,7 @@
 import { SHIPS, shipById } from "../game/ships";
 import { MODULES, type ModuleFamily } from "../game/modules";
 import { persistSave, type SaveData } from "../core/save";
+import { ShipPreview } from "./ship-preview";
 
 const FAMILIES: ModuleFamily[] = ["HEAT", "GROOVE", "DASH"];
 
@@ -9,6 +10,7 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
   const el = document.createElement("div");
   el.className = "hangar-screen";
   parent.appendChild(el);
+  const preview = new ShipPreview();
 
   const loadout = (): string[] => {
     const ship = save.selectedShip;
@@ -24,10 +26,13 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
         <h2 class="hangar-title">HANGAR</h2>
         <p class="hangar-sub">◆ ${save.scrap} SCRAP&ensp;·&ensp;${ship.name}&ensp;·&ensp;${socketed.length}/${ship.slots} SLOTS</p>
       </div>
+      <div class="preview-slot"></div>
       <div class="hangar-ships"></div>
       <div class="hangar-modules"></div>
       <button class="back-btn back"><span>BACK</span></button>
     `;
+    el.querySelector(".preview-slot")!.appendChild(preview.canvas);
+    preview.setShip(ship);
 
     const shipsBox = el.querySelector(".hangar-ships")!;
     for (const s of SHIPS) {
@@ -105,6 +110,7 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
     }
 
     el.querySelector(".back")!.addEventListener("click", () => {
+      preview.dispose();
       el.remove();
       onClose();
     });
