@@ -7,7 +7,16 @@ Spotify, YouTube, anything.
 
 **Play:** https://oversignal.vercel.app
 
-## How the music mechanic works
+## Play your music (the flagship mode)
+
+**PLAY YOUR MUSIC** on the title opens the music picker: drop in your own audio
+files (mp3/wav/m4a/ogg — multi-select queues a playlist) or browse/search
+**Audius** trending and race any track. Either way the full track is decoded
+and analyzed *before* launch — exact beat grid, real drop detection, energy
+mapped to the actual arrangement. No prediction, no capture, works identically
+on every platform (this is the mode that carries to future native builds).
+
+## How the live-sync mechanic works
 
 Spotify removed its audio-analysis API for new apps (Nov 2024), so this game
 listens instead of asking: pick **SYNC YOUR MUSIC** and share the tab playing

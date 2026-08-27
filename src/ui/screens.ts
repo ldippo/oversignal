@@ -12,19 +12,17 @@ export function showMenu(
   hasAudio = false,
   onDaily?: () => void,
   onSettings?: () => void,
+  onPicker?: () => void,
 ): HTMLDivElement {
   const dailyDone = playedToday(save);
   const hasTab = !!navigator.mediaDevices?.getDisplayMedia;
-  const primarySrc = hasAudio ? "keep" : hasTab ? "tab" : "mic";
-  const primaryLabel = hasAudio ? "START RUN" : hasTab ? "SYNC YOUR MUSIC" : "SYNC WITH MIC";
-  const hint = hasAudio
-    ? "music still synced"
-    : hasTab
-      ? "share the tab that’s playing — tick “also share tab audio”"
-      : "hold your phone near the speaker";
+  const primarySrc = hasAudio ? "keep" : "picker";
+  const primaryLabel = hasAudio ? "START RUN" : "PLAY YOUR MUSIC";
+  const hint = hasAudio ? "music ready" : "your files or audius — exact beat sync";
   const alts: string[] = [];
-  if (hasAudio && hasTab) alts.push('<button class="alt" data-src="tab">sync a new tab</button>');
-  if (hasAudio || hasTab) alts.push('<button class="alt" data-src="mic">use microphone</button>');
+  if (hasAudio) alts.push('<button class="alt" data-src="picker">change music</button>');
+  if (hasTab) alts.push('<button class="alt" data-src="tab">sync a tab</button>');
+  alts.push('<button class="alt" data-src="mic">use microphone</button>');
   alts.push('<button class="alt" data-src="silent">play without music</button>');
   const el = document.createElement("div");
   el.className = "title-screen";
@@ -123,6 +121,11 @@ export function showMenu(
 
   el.querySelectorAll<HTMLButtonElement>("button[data-src]").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      if (btn.dataset.src === "picker") {
+        el.remove();
+        onPicker?.();
+        return;
+      }
       err.textContent = "";
       btn.disabled = true;
       try {

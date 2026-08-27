@@ -31,6 +31,9 @@ import { showMenu } from "./ui/screens";
 import { AudioDebug } from "./ui/audio-debug";
 import { NowPlayingHud } from "./ui/now-playing";
 import { handleRedirect } from "./audio/spotify";
+import { TrackPlayer, type QueuedTrack } from "./audio/player";
+import { showMusicPicker, showLoading } from "./ui/music-picker";
+import { fetchStream, type AudiusTrack } from "./audio/audius";
 
 // ---------- renderer / scene ----------
 
@@ -153,6 +156,7 @@ function pauseGame(): void {
   if (state !== "run") return;
   sfx.ensure();
   state = "paused";
+  player.suspend();
   touch?.setVisible(false);
   hud.setVisible(false);
   pauseOverlay = showPause(ui, save, music, applySettings, {
@@ -169,6 +173,7 @@ function pauseGame(): void {
 function resumeGame(): void {
   pauseOverlay = null;
   state = "run";
+  player.resume();
   hud.setVisible(true);
   touch?.setVisible(true);
 }
@@ -176,8 +181,80 @@ let currentTheme = themeFor(0);
 let overlay: HTMLDivElement | null = null;
 
 async function pickAudio(kind: AudioSourceKind): Promise<void> {
+  player.stop();
+  nowPlaying.clearLocal();
   const cap = kind === "tab" ? await captureTab() : kind === "mic" ? await captureMic() : silentSource();
   music.setCapture(cap);
+}
+
+const player = new TrackPlayer();
+player.onTrackChange = (t) => {
+  music.setTrack(t.analysis, () => player.getTime(), `${t.title} — ${t.artist}`);
+  nowPlaying.setLocal(t.title, t.artist, t.artUrl);
+};
+
+function beginRun(): void {
+  sfx.ensure();
+  dailyMode = false;
+  hud.setVisible(true);
+  nowPlaying.startPolling();
+  run = newRun();
+  state = "run";
+  startSegment();
+}
+
+function openPicker(): void {
+  showMusicPicker(ui, {
+    onClose: openMenu,
+    onFiles: (files) => void startWithFiles(files),
+    onAudius: (t) => void startWithAudius(t),
+  });
+}
+
+function closePickerAndStart(queue: QueuedTrack[]): void {
+  document.querySelector(".picker-screen")?.remove();
+  player.setQueue(queue);
+  player.play(0);
+  beginRun();
+}
+
+async function startWithFiles(files: File[]): Promise<void> {
+  const load = showLoading(ui, "ANALYZING…");
+  try {
+    const queue: QueuedTrack[] = [];
+    for (let i = 0; i < files.length; i++) {
+      load.update(`ANALYZING ${i + 1}/${files.length} — ${files[i].name}`);
+      await new Promise((r) => setTimeout(r)); // let the spinner paint
+      const buffer = await player.decode(await files[i].arrayBuffer());
+      queue.push({
+        title: files[i].name.replace(/\.[^.]+$/, ""),
+        artist: "your library",
+        artUrl: null,
+        buffer,
+        analysis: player.analyze(buffer),
+      });
+    }
+    load.close();
+    closePickerAndStart(queue);
+  } catch (e) {
+    load.update(`FAILED — ${e instanceof Error ? e.message : e}`);
+    setTimeout(load.close, 2500);
+  }
+}
+
+async function startWithAudius(t: AudiusTrack): Promise<void> {
+  const load = showLoading(ui, `DOWNLOADING — ${t.title}`);
+  try {
+    const data = await fetchStream(t.id);
+    load.update(`ANALYZING — ${t.title}`);
+    await new Promise((r) => setTimeout(r));
+    const buffer = await player.decode(data);
+    load.close();
+    closePickerAndStart([{ title: t.title, artist: t.artist, artUrl: t.artUrl, buffer, analysis: player.analyze(buffer) }]);
+  } catch (e) {
+    load.update(`FAILED — ${e instanceof Error ? e.message : e}`);
+    setTimeout(load.close, 2500);
+  }
 }
 
 function startSegment(): void {
@@ -611,14 +688,13 @@ function openMenu(): void {
     ui,
     save,
     async (kind) => {
-      if (kind !== "keep") await pickAudio(kind);
-      sfx.ensure();
-      dailyMode = false;
-      hud.setVisible(true);
-      nowPlaying.startPolling();
-      run = newRun();
-      state = "run";
-      startSegment();
+      if (kind === "keep") {
+        // returning to a decoded-track queue: restart it from the top
+        if (music.trackMode && player.queue.length) player.play(0);
+      } else {
+        await pickAudio(kind);
+      }
+      beginRun();
     },
     () => showHangar(ui, save, openMenu),
     music.sourceLabel !== "none",
@@ -629,12 +705,14 @@ function openMenu(): void {
         resumeLabel: "CLOSE",
         onClose: () => {},
       }),
+    openPicker,
   );
 }
 
 /** One attempt/day, stock STINGER, shared seed — pure skill comparison. */
 function startDaily(): void {
   sfx.ensure();
+  if (music.trackMode && player.queue.length && !player.playing) player.play(0);
   dailyMode = true;
   ship.setDef(shipById("stinger"));
   run = new Run(dailySeed(todayUTC()));
@@ -649,6 +727,7 @@ function startDaily(): void {
 /** Back to the attract-mode title without dropping the audio capture. */
 function returnToTitle(): void {
   dailyMode = false;
+  player.stop();
   overlay?.remove();
   overlay = null;
   state = "menu";

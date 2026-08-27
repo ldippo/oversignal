@@ -11,6 +11,7 @@ export class NowPlayingHud {
   private bar: HTMLDivElement;
   private current: NowPlaying | null = null;
   private timer: number | null = null;
+  private localMode = false;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement("div");
@@ -31,10 +32,31 @@ export class NowPlayingHud {
     this.bar = this.root.querySelector(".np-bar-fill")!;
   }
 
+  /** Decoded-track mode: show the current track without Spotify. */
+  setLocal(title: string, artist: string, artUrl: string | null): void {
+    this.localMode = true;
+    this.current = null;
+    this.root.style.display = "";
+    this.title.textContent = title;
+    this.artist.textContent = artist;
+    if (artUrl) {
+      this.art.src = artUrl;
+      this.art.style.display = "";
+    } else {
+      this.art.style.display = "none";
+    }
+    this.bar.style.transform = "scaleX(0)";
+  }
+
+  clearLocal(): void {
+    this.localMode = false;
+    this.root.style.display = "none";
+  }
+
   startPolling(): void {
     if (this.timer !== null || !isConnected()) return;
     const poll = async () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && !this.localMode) {
         this.apply(await fetchNowPlaying());
       }
     };
