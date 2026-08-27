@@ -70,6 +70,7 @@ export class ShipTrails {
   private emitL = new THREE.Vector3();
   private emitR = new THREE.Vector3();
   private up = new THREE.Vector3(0, 1, 0);
+  private offset: [number, number, number] = [1.35, -0.1, 1.9];
 
   constructor(scene: THREE.Scene, color: number) {
     this.left = new Ribbon(scene, color);
@@ -81,10 +82,16 @@ export class ShipTrails {
     this.right.setColor(color);
   }
 
+  /** Per-ship nozzle position (±x, y, z). */
+  setEmitters(offset: [number, number, number]): void {
+    this.offset = offset;
+  }
+
   update(ship: THREE.Object3D, speedFrac: number, blazing: boolean): void {
     ship.updateMatrixWorld();
-    this.emitL.set(-1.35, -0.1, 1.9).applyMatrix4(ship.matrixWorld);
-    this.emitR.set(1.35, -0.1, 1.9).applyMatrix4(ship.matrixWorld);
+    const [x, y, z] = this.offset;
+    this.emitL.set(-x, y, z).applyMatrix4(ship.matrixWorld);
+    this.emitR.set(x, y, z).applyMatrix4(ship.matrixWorld);
     this.up.set(0, 1, 0).applyQuaternion(ship.quaternion);
     const intensity = Math.min(1, speedFrac) * (blazing ? 1.6 : 1);
     this.left.update(this.emitL, this.up, intensity);

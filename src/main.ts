@@ -281,6 +281,7 @@ function startSegment(): void {
   environment.setTheme(theme);
   juice.setRails(trackGroup);
   trails.setColor(ship.def.accent);
+  trails.setEmitters(ship.def.trail);
   ringChain = 0;
   lastHeatTier = run.heatTier;
   wallLatch = false;

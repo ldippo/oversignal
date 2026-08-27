@@ -42,7 +42,7 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 
 | Element | Silh | Signal | Palette | Motion | React | Feedback | Gate |
 |---|---|---|---|---|---|---|---|
-| Ship (all defs) | 4 | 3 | 4 | 4 | 4 | 4 | PASS — trails, dash streak/stretch, accent palette |
+| Ship (5 distinct models) | 5 | 4 | 4 | 4 | 4 | 4 | PASS — per-ship silhouettes tied to rules: dart / rail-bruiser / needle / tuning-fork / ghost-delta; edge glow, nozzle rings, underglow |
 | Beat gate | 5 | 3 | 4 | 4 | 4 | 5 | PASS — shockwave + burst + kick + float text |
 | Ring thread | 5 | 3 | 4 | 3 | 4 | 4 | PASS — beat-pulse scale, sparks, chain strobe |
 | Core pickup | 4 | 4 | 4 | 4 | 4 | 4 | PASS — halo ring, spin, beat pulse, burst + heal text |
