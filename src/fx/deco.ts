@@ -210,6 +210,37 @@ export function heroLandmark(rand: Rand, theme: SectorTheme): THREE.Group {
       }
       break;
     }
+    case "THE ABYSS": {
+      const leviathan = whale(rand, theme.celestial);
+      leviathan.scale.setScalar(4.5);
+      g.add(leviathan);
+      break;
+    }
+    case "VERDANT REACH": {
+      // colossal tree: trunk + stacked canopies with glow rings
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(8, 13, 100, 8), darkMat());
+      g.add(trunk);
+      let y = 25;
+      let r = 62;
+      for (let i = 0; i < 3; i++) {
+        const canopy = new THREE.Mesh(new THREE.ConeGeometry(r, 58, 8), darkMat());
+        canopy.position.y = y + 29;
+        g.add(canopy);
+        const ringSeam = new THREE.Mesh(new THREE.TorusGeometry(r * 0.75, 1.6, 4, 26), glow);
+        ringSeam.rotation.x = Math.PI / 2;
+        ringSeam.position.y = y + 6;
+        g.add(ringSeam);
+        y += 40;
+        r *= 0.68;
+      }
+      break;
+    }
+    case "RED CANYON": {
+      const mothership = ufo(rand, theme.celestial);
+      mothership.scale.setScalar(15);
+      g.add(mothership);
+      break;
+    }
     default: {
       // ACID RUN — signal refinery: cylinder stacks + glowing pipes
       for (let i = 0; i < 4; i++) {
@@ -226,5 +257,202 @@ export function heroLandmark(rand: Rand, theme: SectorTheme): THREE.Group {
     }
   }
   g.userData.hero = glow;
+  return g;
+}
+
+// ==================== BIOME LIFE (wireframe signal creatures) ====================
+
+function wireMat(color: number, opacity = 0.8): THREE.LineBasicMaterial {
+  return new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+}
+
+/** Big slow wireframe whale; drifts along userData.swimDir, loops in a range. */
+export function whale(rand: Rand, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const bodyGeo = new THREE.SphereGeometry(1, 10, 7);
+  bodyGeo.scale(3.2, 2.6, 11);
+  const body = new THREE.Mesh(
+    bodyGeo,
+    new THREE.MeshBasicMaterial({ color: 0x02080c, transparent: true, opacity: 0.55 }),
+  );
+  g.add(body);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo, 8), wireMat(color, 0.65)));
+  const flukeGeo = new THREE.BoxGeometry(5.2, 0.25, 2.2);
+  const fluke = new THREE.Mesh(flukeGeo, new THREE.MeshBasicMaterial({ color: 0x02080c }));
+  fluke.position.set(0, 0.6, 11.6);
+  fluke.rotation.x = 0.35;
+  g.add(fluke);
+  const flukeEdges = new THREE.LineSegments(new THREE.EdgesGeometry(flukeGeo), wireMat(color, 0.8));
+  flukeEdges.position.copy(fluke.position);
+  flukeEdges.rotation.copy(fluke.rotation);
+  g.add(flukeEdges);
+  for (const side of [-1, 1]) {
+    const finGeo = new THREE.BoxGeometry(3.4, 0.2, 1.4);
+    const fin = new THREE.Mesh(finGeo, new THREE.MeshBasicMaterial({ color: 0x02080c }));
+    fin.position.set(side * 3.4, -1.1, -2);
+    fin.rotation.z = side * 0.4;
+    g.add(fin);
+  }
+  g.userData.creature = "whale";
+  g.userData.speed = 2.5 + rand() * 2;
+  g.userData.phase = rand() * 10;
+  return g;
+}
+
+/** Jellyfish: translucent dome + tentacle lines; bobs and pulses with the beat. */
+export function jellyfish(rand: Rand, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const domeGeo = new THREE.SphereGeometry(1.6 + rand(), 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  const dome = new THREE.Mesh(
+    domeGeo,
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, side: THREE.DoubleSide }),
+  );
+  g.add(dome);
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(domeGeo, 10), wireMat(color, 0.7)));
+  const tentPts: THREE.Vector3[] = [];
+  const n = 6;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const r0 = 1.0;
+    tentPts.push(new THREE.Vector3(Math.cos(a) * r0, 0, Math.sin(a) * r0));
+    tentPts.push(new THREE.Vector3(Math.cos(a) * (r0 + rand() * 0.6), -3 - rand() * 2, Math.sin(a) * (r0 + 0.4)));
+  }
+  const tentGeo = new THREE.BufferGeometry().setFromPoints(tentPts);
+  g.add(new THREE.LineSegments(tentGeo, wireMat(color, 0.45)));
+  g.userData.creature = "jelly";
+  g.userData.phase = rand() * 10;
+  return g;
+}
+
+/** School of fish: a Points blob that slowly orbits its anchor. */
+export function fishSchool(rand: Rand, color: number): THREE.Points {
+  const n = 46;
+  const pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = (rand() - 0.5) * 10;
+    pos[i * 3 + 1] = (rand() - 0.5) * 4;
+    pos[i * 3 + 2] = (rand() - 0.5) * 10;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({ color, size: 0.5, transparent: true, opacity: 0.85, sizeAttenuation: true }),
+  );
+  pts.userData.creature = "school";
+  pts.userData.phase = rand() * 10;
+  return pts;
+}
+
+/** Wireframe deer: body, legs, neck, antlers as line segments over a dark core. */
+export function deer(rand: Rand, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const bodyGeo = new THREE.BoxGeometry(0.9, 1.0, 2.2);
+  const body = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ color: 0x040804 }));
+  body.position.y = 1.5;
+  g.add(body);
+  const bodyEdges = new THREE.LineSegments(new THREE.EdgesGeometry(bodyGeo), wireMat(color, 0.85));
+  bodyEdges.position.copy(body.position);
+  g.add(bodyEdges);
+  const pts: THREE.Vector3[] = [];
+  const leg = (x: number, z: number): void => {
+    pts.push(new THREE.Vector3(x, 1.0, z), new THREE.Vector3(x, 0, z));
+  };
+  leg(-0.35, -0.8); leg(0.35, -0.8); leg(-0.35, 0.8); leg(0.35, 0.8);
+  // neck + head
+  pts.push(new THREE.Vector3(0, 2.0, -1.1), new THREE.Vector3(0, 2.9, -1.6));
+  pts.push(new THREE.Vector3(0, 2.9, -1.6), new THREE.Vector3(0, 2.85, -2.15));
+  // antlers
+  for (const side of [-1, 1]) {
+    pts.push(new THREE.Vector3(0, 2.9, -1.6), new THREE.Vector3(side * 0.5, 3.6, -1.5));
+    pts.push(new THREE.Vector3(side * 0.5, 3.6, -1.5), new THREE.Vector3(side * 0.8, 4.1, -1.7));
+    pts.push(new THREE.Vector3(side * 0.5, 3.6, -1.5), new THREE.Vector3(side * 0.35, 4.2, -1.3));
+  }
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), wireMat(color, 0.85)));
+  g.rotation.y = rand() * Math.PI * 2;
+  return g;
+}
+
+/** Flock of chevron birds; flies across the track, wings flap, loops. */
+export function birdFlock(rand: Rand, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const count = 5 + Math.floor(rand() * 4);
+  const wingMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+  for (let i = 0; i < count; i++) {
+    const bird = new THREE.Group();
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.32), wingMat);
+      wing.position.x = side * 0.5;
+      wing.userData.side = side;
+      bird.add(wing);
+    }
+    bird.position.set((rand() - 0.5) * 14, (rand() - 0.5) * 5, (rand() - 0.5) * 10);
+    bird.userData.flapPhase = rand() * 10;
+    g.add(bird);
+  }
+  g.userData.creature = "flock";
+  g.userData.speed = 8 + rand() * 5;
+  g.userData.range = 260;
+  g.userData.phase = rand() * 10;
+  return g;
+}
+
+/** Stratified canyon mesa: stacked slabs with glowing strata seams. */
+export function mesa(rand: Rand, theme: SectorTheme): THREE.Group {
+  const g = new THREE.Group();
+  const w = 26 + rand() * 34;
+  let y = -12;
+  const layers = 3 + Math.floor(rand() * 2);
+  for (let i = 0; i < layers; i++) {
+    const lw = w * (1 - i * 0.13) * (0.9 + rand() * 0.2);
+    const lh = 14 + rand() * 16;
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(lw, lh, lw * (0.7 + rand() * 0.3)),
+      new THREE.MeshStandardMaterial({ color: 0x120704, roughness: 0.95, metalness: 0.05 }),
+    );
+    slab.position.y = y + lh / 2;
+    slab.rotation.y = (rand() - 0.5) * 0.3;
+    g.add(slab);
+    const seam = new THREE.Mesh(
+      new THREE.BoxGeometry(lw * 1.02, 0.3, lw * 0.73),
+      new THREE.MeshBasicMaterial({ color: theme.edgeLeft, transparent: true, opacity: 0.5 }),
+    );
+    seam.position.y = y + lh;
+    seam.rotation.y = slab.rotation.y;
+    g.add(seam);
+    y += lh;
+  }
+  return g;
+}
+
+/** Classic saucer: disc + dome + glow ring; hovers, sways, some carry beams. */
+export function ufo(rand: Rand, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const disc = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.2, 4.4, 0.9, 12),
+    new THREE.MeshStandardMaterial({ color: 0x0a0a14, roughness: 0.3, metalness: 0.9 }),
+  );
+  g.add(disc);
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(1.6, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 }),
+  );
+  dome.position.y = 0.45;
+  g.add(dome);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.16, 6, 20), new THREE.MeshBasicMaterial({ color }));
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = -0.3;
+  g.add(ring);
+  if (rand() < 0.45) {
+    const beam = new THREE.Mesh(
+      new THREE.ConeGeometry(3.2, 14, 10, 1, true),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }),
+    );
+    beam.position.y = -7.4;
+    beam.userData.beam = true;
+    g.add(beam);
+  }
+  g.userData.creature = "ufo";
+  g.userData.phase = rand() * 10;
   return g;
 }

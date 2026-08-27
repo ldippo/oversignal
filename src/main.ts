@@ -804,5 +804,6 @@ Object.assign(window as unknown as Record<string, unknown>, {
     get features() { return features; },
     music,
     sfx,
+    debugSector(n: number) { run.segmentIndex = n; startSegment(); },
   },
 });

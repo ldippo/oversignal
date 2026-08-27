@@ -62,6 +62,10 @@ Scores as of each pass; NEW = not yet built. Rework anything failing gate.
 | Tunnel arches | 4 | 4 | 4 | 3 | 4 | n/a | PASS — beat-pulsing ring corridor |
 | Mega-gate | 5 | 3 | 4 | 4 | 4 | 5 | PASS — double-beam silhouette, doubled fx |
 
+| Ocean biome (whale/jelly/school) | 4 | 5 | 4 | 4 | 4 | n/a | PASS — wireframe leviathans, beat-pulsing jellyfish |
+| Forest biome (pines/deer/flocks) | 4 | 4 | 4 | 3 | 3 | n/a | PASS — instanced pines w/ glow tips, flapping chevron flocks |
+| Canyon biome (mesas/UFOs) | 4 | 4 | 4 | 3 | 4 | n/a | PASS — strata seams, bobbing saucers w/ flickering beams |
+
 Retired: box pylon, monolith, rock (replaced by kit).
 Juice is adaptive: all burst/kick/rumble intensity scales with music energy
 (0.55 in quiet passages → ~1.25 at full chorus); shockwaves and hitstop stay

@@ -3,7 +3,7 @@ import { mulberry32 } from "./generator";
 import type { Segment } from "./generator";
 import { makeFrame } from "./spline";
 import type { SectorTheme } from "../fx/palette";
-import { dataSpire, transmissionArray, ghostWireframe, shardCluster, heroLandmark } from "../fx/deco";
+import { dataSpire, transmissionArray, ghostWireframe, shardCluster, heroLandmark, whale, jellyfish, fishSchool, deer, birdFlock, mesa, ufo } from "../fx/deco";
 
 /**
  * Shape = verb grammar (docs/art-direction.md):
@@ -191,6 +191,7 @@ export class FeatureField {
   private ghosts: THREE.LineBasicMaterial[] = [];
   private ghostPhases: number[] = [];
   private heroGlow: THREE.MeshBasicMaterial | null = null;
+  private creatures: THREE.Object3D[] = [];
   private arch: THREE.Group | null = null;
   private tunnelArches: THREE.Mesh[] = [];
 
@@ -340,32 +341,116 @@ export class FeatureField {
       }
     }
 
-    // trackside signal architecture (docs/design-language.md)
-    for (let s = 160, side = 1; s < spline.length - 100; s += 130 + rand() * 60, side = -side) {
-      if (rand() < 0.5) {
-        const spire = dataSpire(rand, theme);
-        spire.userData.lift = 0;
-        this.spinners.push(spire);
-        deco(spire, s, side * (halfWidth + 16 + rand() * 14));
-      } else {
-        const cluster = shardCluster(rand, theme);
-        cluster.userData.lift = 8 + rand() * 18;
-        this.spinners.push(cluster);
-        deco(cluster, s, side * (26 + rand() * 26));
+    // trackside dressing switches per biome (signal kit / ocean / forest / canyon)
+    const addCreature = (obj: THREE.Object3D, s: number, lateral: number): void => {
+      deco(obj, s, lateral);
+      obj.userData.base = obj.position.clone();
+      this.creatures.push(obj);
+    };
+    if (theme.biome === "signal") {
+      for (let s = 160, side = 1; s < spline.length - 100; s += 130 + rand() * 60, side = -side) {
+        if (rand() < 0.5) {
+          const spire = dataSpire(rand, theme);
+          spire.userData.lift = 0;
+          this.spinners.push(spire);
+          deco(spire, s, side * (halfWidth + 16 + rand() * 14));
+        } else {
+          const cluster = shardCluster(rand, theme);
+          cluster.userData.lift = 8 + rand() * 18;
+          this.spinners.push(cluster);
+          deco(cluster, s, side * (26 + rand() * 26));
+        }
       }
-    }
-    for (let s = 300; s < spline.length - 100; s += 320 + rand() * 140) {
-      const arr = transmissionArray(rand, theme);
-      arr.userData.lift = 0;
-      this.arrayTips.push(arr.userData.tip as THREE.MeshBasicMaterial);
-      deco(arr, s, (rand() < 0.5 ? -1 : 1) * (38 + rand() * 30));
-    }
-    for (let s = 400; s < spline.length; s += 520 + rand() * 260) {
-      const ghost = ghostWireframe(rand, theme);
-      ghost.userData.lift = 30 + rand() * 60;
-      this.ghosts.push(ghost.userData.ghost as THREE.LineBasicMaterial);
-      this.ghostPhases.push(ghost.userData.ghostPhase as number);
-      deco(ghost, s, (rand() < 0.5 ? -1 : 1) * (170 + rand() * 140));
+      for (let s = 300; s < spline.length - 100; s += 320 + rand() * 140) {
+        const arr = transmissionArray(rand, theme);
+        arr.userData.lift = 0;
+        this.arrayTips.push(arr.userData.tip as THREE.MeshBasicMaterial);
+        deco(arr, s, (rand() < 0.5 ? -1 : 1) * (38 + rand() * 30));
+      }
+      for (let s = 400; s < spline.length; s += 520 + rand() * 260) {
+        const ghost = ghostWireframe(rand, theme);
+        ghost.userData.lift = 30 + rand() * 60;
+        this.ghosts.push(ghost.userData.ghost as THREE.LineBasicMaterial);
+        this.ghostPhases.push(ghost.userData.ghostPhase as number);
+        deco(ghost, s, (rand() < 0.5 ? -1 : 1) * (170 + rand() * 140));
+      }
+    } else if (theme.biome === "ocean") {
+      // THE ABYSS: whales far out, jellyfish drifting near, fish schools mid
+      for (let s = 250; s < spline.length - 100; s += 420 + rand() * 200) {
+        const w = whale(rand, theme.edgeLeft);
+        w.userData.lift = 18 + rand() * 30;
+        addCreature(w, s, (rand() < 0.5 ? -1 : 1) * (60 + rand() * 90));
+      }
+      for (let s = 180; s < spline.length - 80; s += 130 + rand() * 90) {
+        const j = jellyfish(rand, theme.scrap);
+        j.userData.lift = 6 + rand() * 14;
+        addCreature(j, s, (rand() < 0.5 ? -1 : 1) * (22 + rand() * 26));
+      }
+      for (let s = 300; s < spline.length - 100; s += 500 + rand() * 250) {
+        const f = fishSchool(rand, theme.edgeRight);
+        f.userData.lift = 8 + rand() * 12;
+        addCreature(f, s, (rand() < 0.5 ? -1 : 1) * (30 + rand() * 30));
+      }
+    } else if (theme.biome === "forest") {
+      // VERDANT REACH: instanced pine forest + wireframe deer + bird flocks
+      const pinePositions: { s: number; lat: number; scale: number }[] = [];
+      for (let s = 120, side = 1; s < spline.length - 60; s += 26 + rand() * 22, side = -side) {
+        pinePositions.push({ s, lat: side * (halfWidth + 7 + rand() * 22), scale: 0.7 + rand() * 0.9 });
+        if (rand() < 0.5) {
+          pinePositions.push({ s: s + 8, lat: -side * (halfWidth + 9 + rand() * 20), scale: 0.6 + rand() * 0.8 });
+        }
+      }
+      const pines = new THREE.InstancedMesh(
+        new THREE.ConeGeometry(2.2, 9, 6),
+        new THREE.MeshStandardMaterial({ color: 0x03140a, roughness: 0.9 }),
+        pinePositions.length,
+      );
+      const m4 = new THREE.Matrix4();
+      const tipPts: number[] = [];
+      pinePositions.forEach((pp, i) => {
+        spline.frameAt(pp.s, frame);
+        const pos = frame.position.clone().addScaledVector(frame.right, pp.lat);
+        pos.y += 4.5 * pp.scale - 1;
+        m4.makeScale(pp.scale, pp.scale, pp.scale).setPosition(pos);
+        pines.setMatrixAt(i, m4);
+        tipPts.push(pos.x, pos.y + 4.5 * pp.scale + 0.3, pos.z);
+      });
+      this.group.add(pines);
+      const tipGeo = new THREE.BufferGeometry();
+      tipGeo.setAttribute("position", new THREE.Float32BufferAttribute(tipPts, 3));
+      this.group.add(new THREE.Points(
+        tipGeo,
+        new THREE.PointsMaterial({ color: theme.edgeLeft, size: 0.7, transparent: true, opacity: 0.9 }),
+      ));
+      for (let s = 300; s < spline.length - 100; s += 380 + rand() * 240) {
+        const d = deer(rand, theme.edgeRight);
+        d.userData.lift = 0;
+        deco(d, s, (rand() < 0.5 ? -1 : 1) * (halfWidth + 10 + rand() * 14));
+      }
+      for (let s = 350; s < spline.length - 150; s += 600 + rand() * 300) {
+        const b = birdFlock(rand, theme.gate);
+        b.userData.lift = 18 + rand() * 15;
+        const a = rand() * Math.PI * 2;
+        b.userData.dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+        addCreature(b, s, (rand() < 0.5 ? -1 : 1) * 40);
+      }
+    } else {
+      // RED CANYON: stratified mesa corridor + hovering saucers
+      for (let s = 100, side = 1; s < spline.length - 80; s += 120 + rand() * 80, side = -side) {
+        const m1 = mesa(rand, theme);
+        m1.userData.lift = 0;
+        deco(m1, s, side * (halfWidth + 34 + rand() * 40));
+        if (rand() < 0.55) {
+          const m2 = mesa(rand, theme);
+          m2.userData.lift = 0;
+          deco(m2, s + 40, -side * (halfWidth + 40 + rand() * 60));
+        }
+      }
+      for (let s = 250; s < spline.length - 100; s += 320 + rand() * 200) {
+        const u = ufo(rand, theme.gate);
+        u.userData.lift = 16 + rand() * 22;
+        addCreature(u, s, (rand() < 0.5 ? -1 : 1) * (25 + rand() * 45));
+      }
     }
     // tunnel sections: arch rings every 18m — flying one on-beat is a drum fill
     for (const sec of segment.sections) {
@@ -431,6 +516,59 @@ export class FeatureField {
     }
     if (this.heroGlow) {
       this.heroGlow.opacity = 0.3 + energy * 0.4 + beatPulse * 0.12;
+    }
+    for (const c of this.creatures) {
+      const ph = (c.userData.phase as number) ?? 0;
+      const base = c.userData.base as THREE.Vector3 | undefined;
+      if (!base) continue;
+      switch (c.userData.creature) {
+        case "whale":
+          c.position.set(
+            base.x + Math.sin(time * 0.12 + ph) * 14,
+            base.y + Math.sin(time * 0.35 + ph) * 2.5,
+            base.z + Math.cos(time * 0.1 + ph) * 10,
+          );
+          c.rotation.z = Math.sin(time * 0.3 + ph) * 0.07;
+          break;
+        case "jelly": {
+          c.position.y = base.y + Math.sin(time * 0.7 + ph) * 2.5;
+          const sq = 1 + beatPulse * 0.2;
+          c.scale.set(sq, 1 / sq, sq);
+          break;
+        }
+        case "school":
+          c.rotation.y = time * 0.5 + ph;
+          c.position.y = base.y + Math.sin(time * 0.6 + ph) * 1.5;
+          break;
+        case "flock": {
+          const dir = c.userData.dir as THREE.Vector3;
+          const spd = c.userData.speed as number;
+          const range = c.userData.range as number;
+          const t = ((time * spd + ph * 30) % range) - range / 2;
+          c.position.set(base.x + dir.x * t, base.y + Math.sin(time * 0.8 + ph) * 2, base.z + dir.z * t);
+          for (const bird of c.children) {
+            const flap = Math.sin(time * 9 + (bird.userData.flapPhase as number)) * 0.55;
+            for (const wing of bird.children) {
+              wing.rotation.z = (wing.userData.side as number) * (0.25 + flap);
+            }
+          }
+          break;
+        }
+        case "ufo": {
+          c.position.set(
+            base.x + Math.sin(time * 0.33 + ph) * 4,
+            base.y + Math.sin(time * 0.9 + ph) * 1.4,
+            base.z,
+          );
+          for (const child of c.children) {
+            if (child.userData.beam) {
+              const mat = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+              mat.opacity = 0.08 + Math.max(0, Math.sin(time * 5 + ph)) * 0.07 + beatPulse * 0.04;
+            }
+          }
+          break;
+        }
+      }
     }
     const archScale = 1 + beatPulse * 0.06;
     for (const a of this.tunnelArches) a.scale.setScalar(archScale);
