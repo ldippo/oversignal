@@ -145,6 +145,19 @@ class Sfx {
     this.tone(1250, 0.03, { gain: 0.04 });
   }
 
+  nearMiss(): void {
+    this.tone(1500, 0.07, { gain: 0.07, freqEnd: 950 });
+  }
+
+  heatUp(tier: number): void {
+    this.tone(392 * Math.pow(2, Math.min(tier, 6) / 12), 0.1, { gain: 0.09 });
+    this.tone(392 * Math.pow(2, Math.min(tier, 6) / 12) * 1.5, 0.14, { gain: 0.07, delay: 0.06 });
+  }
+
+  heatDown(): void {
+    this.tone(300, 0.09, { gain: 0.07, freqEnd: 180 });
+  }
+
   warp(): void {
     this.noise(0.7, 800, 0.1, 3800);
   }

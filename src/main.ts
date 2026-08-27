@@ -99,7 +99,9 @@ let elapsed = 0;
 let wasDropActive = false;
 let fenceOpenNow = false;
 let ringChain = 0;
-let chainForgive = 0;
+let lastHeatTier = 1;
+let wasDashing = false;
+let wallLatch = false;
 let dailyMode = false;
 let lowConfTime = 0;
 let tipScanTimer = 0;
@@ -280,7 +282,8 @@ function startSegment(): void {
   juice.setRails(trackGroup);
   trails.setColor(ship.def.accent);
   ringChain = 0;
-  chainForgive = run.mods.chainKeeper ? 1 : 0;
+  lastHeatTier = run.heatTier;
+  wallLatch = false;
   ship.setSpline(segment.spline, segment.halfWidth);
   ship.s = 0;
   ship.lateral = 0;
@@ -397,6 +400,7 @@ function newRun(): Run {
   for (const id of save.loadouts[save.selectedShip] ?? []) {
     moduleById(id)?.apply(r.mods);
   }
+  def.applyRule(r.mods); // ship RULE wins over module tweaks
   r.hull = r.mods.hullMax;
   r.dashPips = Math.min(3, r.mods.maxPips);
   return r;
@@ -498,8 +502,6 @@ const loop = new GameLoop(
       juice.shockwave(ship.object.position, ship.object.quaternion, 0xffffff, 30);
       juice.strobeRails();
       juice.kick(0.8);
-      music.dropTimer += run.mods.dropExtend;
-      if (run.mods.odCharger) run.dashPips = run.mods.maxPips;
     }
     wasDropActive = music.dropActive;
 
@@ -510,7 +512,7 @@ const loop = new GameLoop(
     const input = readInput();
     if (input.dash && !ship.dashing && run.dashPips >= 1) {
       run.dashPips -= 1;
-      ship.dash();
+      ship.dash(run.mods.dashDurMult);
       sfx.dash();
       juice.kick(0.6);
       juice.burst(ship.object.position, 16, ship.def.accent, 18);
@@ -520,6 +522,28 @@ const loop = new GameLoop(
     ship.update(dt, input, speedScale);
     run.distance += ship.s - prevS;
     run.addScore((ship.s - prevS) * 0.15);
+
+    // HEAT: speed sustains it, caution bleeds it (docs/meta-progression.md)
+    const speedFrac = ship.speed / (ship.stats.maxSpeed * speedScale);
+    if (speedFrac > 0.85) run.addHeat(0.1 * dt);
+    else if (input.brake || speedFrac < 0.5) run.decayHeat(0.15 * dt);
+    if (ship.hitWall && run.mods.scrapeBuildsHeat) run.addHeat(0.22 * dt);
+    if (run.mods.afterburn && wasDashing && !ship.dashing) run.addHeat(99);
+    wasDashing = ship.dashing;
+    if (run.heatTier > lastHeatTier) {
+      sfx.heatUp(run.heatTier);
+      juice.kick(0.2);
+      juice.floatText(ship.object.position, camera, `HEAT ×${run.heatTier}`, "#ffc44e");
+      tip("heat", "HEAT MULTIPLIES EVERYTHING — STAY FAST, STAY CLOSE");
+    } else if (run.heatTier < lastHeatTier) {
+      sfx.heatDown();
+    }
+    lastHeatTier = run.heatTier;
+
+    // GROOVE: rhythm-linked regen + aura
+    run.grooveTick(dt);
+    ship.aura += ((run.grooveAlive ? 1 : 0) - ship.aura) * Math.min(1, 5 * dt);
+    if (run.mods.chorusPips && run.grooveAlive) run.earnPip(0.06 * dt);
 
     for (const ev of features.check(prevS, ship.s, ship.lateral, run.mods.magnetRadius)) {
       const fpos = ev.feature.mesh.position;
@@ -532,6 +556,8 @@ const loop = new GameLoop(
           run.addScore(mega ? 240 : 120);
           run.heal(run.mods.hullRegenOnBeat);
           run.earnPip(1);
+          run.feedGroove();
+          run.addHeat(0.34);
           ship.applyBoost((mega ? 0.6 : 0.42) * run.mods.boostPower, 1.6);
           sfx.gatePerfect(run.combo + (mega ? 4 : 0));
           hud.flashBanner(mega ? `MEGA PERFECT ×${run.combo}` : `PERFECT ×${run.combo}`, 0.6);
@@ -541,6 +567,7 @@ const loop = new GameLoop(
           juice.floatText(fpos, camera, mega ? "+240 MEGA" : "+120", "#fff");
         } else {
           run.combo = 0;
+          run.breakGroove(false);
           run.addScore(40);
           ship.applyBoost(0.16 * run.mods.boostPower, 0.8);
           sfx.gateMiss();
@@ -548,7 +575,13 @@ const loop = new GameLoop(
           juice.floatText(fpos, camera, "+40");
         }
       } else if (ev.kind === "shard" || ev.kind === "barrier") {
-        if (ship.dashing) {
+        if (!ev.collected) {
+          // NEAR-MISS: shaved it — heat reward, loud feedback
+          run.addHeat(0.25);
+          sfx.nearMiss();
+          juice.burst(fpos, 8, 0xffc44e, 12);
+          juice.floatText(fpos, camera, "CLOSE", "#ffc44e");
+        } else if (ship.dashing) {
           run.addScore(150);
           sfx.shatter();
           hud.flashBanner("SHATTER", 0.4);
@@ -557,7 +590,7 @@ const loop = new GameLoop(
           juice.kick(0.4);
           loop.freeze(0.04);
           juice.floatText(fpos, camera, "+150 SHATTER", "#ffc44e");
-          if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount);
+          if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount * run.mods.pipRefundMult);
           if (run.mods.shatterwave) {
             // detonate hazards just ahead of the shatter point
             for (const other of features.features) {
@@ -568,11 +601,12 @@ const loop = new GameLoop(
               other.mesh.visible = false;
               run.addScore(100);
               juice.burst(other.mesh.position, 16, currentTheme.obstacle, 20);
-              if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount);
+              if (run.mods.pipSiphon) run.earnPip(run.mods.pipSiphonAmount * run.mods.pipRefundMult);
             }
           }
         } else if (!music.dropActive) {
-          run.damage(18);
+          run.damage(18 * run.mods.impactArmor);
+          run.onHit();
           ship.speed *= 0.6;
           run.combo = 0;
           sfx.damage();
@@ -580,44 +614,51 @@ const loop = new GameLoop(
           juice.damageFlash();
           juice.rumble(0.8);
           loop.freeze(0.06);
-          juice.floatText(ship.object.position, camera, "-18", "#ff5a5a");
+          juice.floatText(ship.object.position, camera, `-${Math.round(18 * run.mods.impactArmor)}`, "#ff5a5a");
         }
       } else if (ev.kind === "fence") {
-        if (fenceOpenNow || music.dropActive || ship.dashing) {
+        if (!ev.collected) {
+          // edge lane: a near-miss only when the membrane was actually closed
+          if (!fenceOpenNow && !ship.dashing && !music.dropActive) {
+            run.addHeat(0.25);
+            sfx.nearMiss();
+            juice.burst(fpos, 8, 0xffc44e, 12);
+            juice.floatText(ship.object.position, camera, "CLOSE", "#ffc44e");
+          }
+        } else if (fenceOpenNow || music.dropActive || ship.dashing) {
           run.addScore(60);
           sfx.fencePass();
           juice.burst(fpos, 10, currentTheme.obstacle, 10);
           juice.floatText(fpos, camera, "+60");
         } else {
-          run.damage(14);
+          run.damage(14 * run.mods.impactArmor);
+          run.onHit();
           ship.speed *= 0.7;
           run.combo = 0;
           sfx.damage();
           juice.damageFlash();
           juice.rumble(0.6);
-          juice.floatText(ship.object.position, camera, "-14", "#ff5a5a");
+          juice.floatText(ship.object.position, camera, `-${Math.round(14 * run.mods.impactArmor)}`, "#ff5a5a");
         }
       } else if (ev.kind === "ring") {
         if (ev.collected) {
           ringChain++;
-          run.addScrap(5 * run.mods.ringScrapMult);
+          run.addScrap(5);
           run.addScore(25);
+          run.feedGroove();
           sfx.ring(ringChain);
           juice.burst(fpos, 8, currentTheme.scrap, 10);
           if (ringChain % 5 === 0) {
-            run.addScrap(15 * run.mods.chainBonusMult);
-            run.addScore(100 * run.mods.chainBonusMult);
+            run.addScrap(15);
+            run.addScore(100);
             run.earnPip(1);
-            chainForgive = run.mods.chainKeeper ? 1 : 0;
             hud.flashBanner(`CHAIN ${ringChain}`, 0.5);
             juice.strobeRails();
-            juice.floatText(fpos, camera, `CHAIN ${ringChain} +${Math.round(100 * run.mods.chainBonusMult)}`, "#ffc44e");
+            juice.floatText(fpos, camera, `CHAIN ${ringChain} +100`, "#ffc44e");
           }
-        } else if (chainForgive > 0) {
-          chainForgive--;
-          juice.floatText(ship.object.position, camera, "CHAIN KEPT", "#8aff6a");
         } else {
           ringChain = 0;
+          run.breakGroove(false);
         }
       } else if (ev.kind === "core" && ev.collected) {
         sfx.core();
@@ -645,12 +686,18 @@ const loop = new GameLoop(
 
     if (ship.hitWall) {
       sfx.scrape();
-      run.damage(WALL_DPS * (0.3 + (ship.speed / ship.stats.maxSpeed) * 0.7) * dt);
-      run.combo = 0;
+      if (run.mods.scrapeArmor > 0) {
+        run.damage(WALL_DPS * (0.3 + (ship.speed / ship.stats.maxSpeed) * 0.7) * dt * run.mods.scrapeArmor);
+        run.combo = 0;
+        if (!wallLatch) run.onHit(); // one heat/groove penalty per contact episode
+      }
+      wallLatch = true;
       if (Math.random() < dt * 40) {
         juice.burst(ship.object.position, 2, 0xffaa55, 9);
       }
       juice.rumble(dt * 3);
+    } else {
+      wallLatch = false;
     }
     if (run.over) {
       gameOver();
@@ -676,6 +723,7 @@ const loop = new GameLoop(
     }
     post.update(music.energy, music.beatPulse, music.dropActive);
     hud.update(run, ship.speed * 3.6, 1 / 60);
+    hud.updateHeat(run.heatTier, run.heatProgress, run.mods.maxHeatTier);
     hud.updateSync(music.beatConfidence, music.silent, music.beatPulse);
     audioDebug.update(music);
     nowPlaying.update();

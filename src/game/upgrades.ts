@@ -103,11 +103,30 @@ export const UPGRADE_POOL: Upgrade[] = [
     apply: (run) => { run.mods.pipSiphonAmount = 1; },
   },
   {
-    id: "chain-amp",
-    name: "CHAIN AMP",
-    desc: "[CHAIN KEEPER] Chain bonuses doubled.",
-    requires: (run) => run.mods.chainKeeper,
-    apply: (run) => { run.mods.chainBonusMult *= 2; },
+    id: "coolant-lock",
+    name: "COOLANT LOCK",
+    desc: "[OVERCLOCK] Heat decays 40% slower.",
+    requires: (run) => run.mods.maxHeatTier > 5 && run.mods.heatBuildMult < 2,
+    apply: (run) => { run.mods.heatDecayMult *= 0.6; },
+  },
+  // new-system draft cards
+  {
+    id: "groove-amp",
+    name: "GROOVE AMP",
+    desc: "Groove regen +2 hull/s.",
+    apply: (run) => { run.mods.grooveRegen += 2; },
+  },
+  {
+    id: "ceramic-plating",
+    name: "CERAMIC PLATING",
+    desc: "Impact damage −25%.",
+    apply: (run) => { run.mods.impactArmor *= 0.75; },
+  },
+  {
+    id: "heat-primer",
+    name: "HEAT PRIMER",
+    desc: "Heat builds 25% faster.",
+    apply: (run) => { run.mods.heatBuildMult *= 1.25; },
   },
 ];
 

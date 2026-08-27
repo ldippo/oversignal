@@ -93,6 +93,9 @@ export class Ship {
   readonly object: THREE.Group;
   stats: ShipStats = { ...BASE_STATS };
   def: ShipDef = shipById("stinger");
+  /** groove aura 0..1 — brightens the engine light while regen flows */
+  aura = 0;
+  private engineLight: THREE.PointLight | null = null;
 
   private frame = makeFrame();
   private steerSmooth = 0;
@@ -104,6 +107,7 @@ export class Ship {
 
   constructor(private spline: TrackSpline, private trackHalfWidth: number) {
     this.object = buildShipMesh(this.def);
+    this.engineLight = this.object.children.find((c): c is THREE.PointLight => (c as THREE.PointLight).isPointLight) ?? null;
   }
 
   /** Swap model + apply the def's stat multipliers over base stats. */
@@ -112,6 +116,7 @@ export class Ship {
     disposeChildren(this.object);
     const built = buildShipMesh(def);
     for (const child of [...built.children]) this.object.add(child);
+    this.engineLight = this.object.children.find((c): c is THREE.PointLight => (c as THREE.PointLight).isPointLight) ?? null;
     this.stats = {
       ...BASE_STATS,
       maxSpeed: BASE_STATS.maxSpeed * def.stats.maxSpeedMult,
@@ -212,6 +217,7 @@ export class Ship {
     // light-streak stretch during dash
     const stretch = this.dashing ? 1 + Math.sin(this.dashProgress * Math.PI) * 0.9 : 1;
     this.object.scale.set(1, 1, stretch);
+    if (this.engineLight) this.engineLight.intensity = 8 + this.aura * 10;
 
     this.object.position
       .copy(f.position)

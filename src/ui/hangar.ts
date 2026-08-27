@@ -2,7 +2,7 @@ import { SHIPS, shipById } from "../game/ships";
 import { MODULES, type ModuleFamily } from "../game/modules";
 import { persistSave, type SaveData } from "../core/save";
 
-const FAMILIES: ModuleFamily[] = ["DASH", "TEMPO", "SALVAGE"];
+const FAMILIES: ModuleFamily[] = ["HEAT", "GROOVE", "DASH"];
 
 /** Ship shop + module shop/loadout. Mutates + persists save directly. */
 export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => void): void {
@@ -38,6 +38,7 @@ export function showHangar(parent: HTMLElement, save: SaveData, onClose: () => v
       card.innerHTML = `
         <span class="card-name" style="color:#${s.accent.toString(16).padStart(6, "0")}">${s.name}</span>
         <span class="card-desc">${s.desc}</span>
+        <span class="card-desc card-rule">${s.ruleDesc}</span>
         <span class="card-desc">SLOTS: ${"◆".repeat(s.slots)}</span>
         <span class="card-key">${selected ? "SELECTED" : owned ? "SELECT" : `BUY · ${s.cost} SCRAP`}</span>
       `;

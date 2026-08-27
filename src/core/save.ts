@@ -1,4 +1,5 @@
 import { META_TRACKS, tierCost, type MetaTrackId } from "../game/meta";
+import { MODULE_MIGRATION } from "../game/modules";
 import type { DailyResult } from "../game/daily";
 
 export interface Settings {
@@ -42,6 +43,14 @@ interface LegacySave extends Partial<SaveData> {
   meta?: Record<MetaTrackId, number>;
 }
 
+function migrateModule(id: string): string {
+  return MODULE_MIGRATION[id] ?? id;
+}
+
+function dedupe(arr: string[]): string[] {
+  return [...new Set(arr)];
+}
+
 /** v2 linear-track spend, refunded in full on migration to modules. */
 function legacyRefund(meta: Record<MetaTrackId, number>): number {
   let refund = 0;
@@ -62,8 +71,10 @@ export function loadSave(): SaveData {
         ...parsed,
         v: 3,
         ownedShips: parsed.ownedShips?.length ? parsed.ownedShips : [...DEFAULTS.ownedShips],
-        ownedModules: parsed.ownedModules ?? [],
-        loadouts: parsed.loadouts ?? {},
+        ownedModules: dedupe((parsed.ownedModules ?? []).map(migrateModule)),
+        loadouts: Object.fromEntries(
+          Object.entries(parsed.loadouts ?? {}).map(([ship, mods]) => [ship, dedupe(mods.map(migrateModule))]),
+        ),
         settings: { ...DEFAULTS.settings, ...(parsed.settings ?? {}) },
         seenTips: parsed.seenTips ?? [],
       };

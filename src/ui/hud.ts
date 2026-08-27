@@ -19,6 +19,12 @@ export class Hud {
   private tipEl: HTMLDivElement;
   private tipQueue: string[] = [];
   private tipTimer = 0;
+  private heatEl: HTMLDivElement;
+  private heatMult: HTMLSpanElement;
+  private heatSegsBox: HTMLSpanElement;
+  private heatSegs: HTMLElement[] = [];
+  private heatMax = -1;
+  private lastHeatTier = -1;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement("div");
@@ -26,6 +32,7 @@ export class Hud {
       <div class="hud-speed"></div>
       <div class="hud-hull"><div class="hud-hull-fill"></div></div>
       <div class="hud-pips"></div>
+      <div class="hud-heat"><span class="heat-mult"></span><span class="heat-segs"></span></div>
       <div class="hud-sync"><span class="sync-bars"><i></i><i></i><i></i></span><span class="sync-label"></span></div>
       <div class="hud-tip"></div>
       <div class="hud-seg"></div>
@@ -45,6 +52,27 @@ export class Hud {
     this.syncLabel = this.root.querySelector(".sync-label")!;
     this.syncBars = [...this.root.querySelectorAll<HTMLElement>(".sync-bars i")];
     this.tipEl = this.root.querySelector(".hud-tip")!;
+    this.heatEl = this.root.querySelector(".hud-heat")!;
+    this.heatMult = this.root.querySelector(".heat-mult")!;
+    this.heatSegsBox = this.root.querySelector(".heat-segs")!;
+  }
+
+  /** HEAT meter: tier segments + xN multiplier readout. */
+  updateHeat(tier: number, progress: number, maxTier: number): void {
+    if (maxTier !== this.heatMax) {
+      this.heatMax = maxTier;
+      this.heatSegsBox.innerHTML = Array.from({ length: maxTier }, () => "<i></i>").join("");
+      this.heatSegs = [...this.heatSegsBox.querySelectorAll<HTMLElement>("i")];
+      this.lastHeatTier = -1;
+    }
+    if (tier !== this.lastHeatTier) {
+      this.lastHeatTier = tier;
+      this.heatMult.textContent = `×${tier}`;
+      this.heatEl.classList.toggle("hot", tier >= maxTier);
+      this.heatSegs.forEach((s, i) => s.classList.toggle("full", i < tier - 1));
+    }
+    const current = this.heatSegs[tier - 1];
+    if (current) current.style.setProperty("--fill", `${Math.round(progress * 100)}%`);
   }
 
   /** Beat-sync chip: bar count from confidence, label states, beat pulse. */

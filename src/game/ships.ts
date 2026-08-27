@@ -1,3 +1,5 @@
+import type { RunModifiers } from "./run";
+
 export interface ShipStatMods {
   maxSpeedMult: number;
   accelMult: number;
@@ -13,12 +15,15 @@ export interface ShipDef {
   id: string;
   name: string;
   desc: string;
+  ruleDesc: string; // the signature rule, shown prominently in the hangar
   cost: number; // scrap; 0 = starter
   primary: number;
   accent: number;
   bodyScale: [number, number, number]; // x (width), y (height), z (length) on the hull
   slots: number; // module sockets
   stats: ShipStatMods;
+  /** The RULE — one mechanic-level bend per ship (docs/meta-progression.md). */
+  applyRule: (mods: RunModifiers) => void;
 }
 
 const S = (over: Partial<ShipStatMods>): ShipStatMods => ({
@@ -30,33 +35,43 @@ const S = (over: Partial<ShipStatMods>): ShipStatMods => ({
 export const SHIPS: ShipDef[] = [
   {
     id: "stinger", name: "STINGER", cost: 0, slots: 2,
-    desc: "Balanced factory racer. Does everything, excels at nothing.",
+    desc: "Balanced factory racer.",
+    ruleDesc: "HEAT bleeds half as fast — forgiveness for learning the flow.",
     primary: 0x2244aa, accent: 0x4ef3ff, bodyScale: [1, 1, 1],
     stats: S({}),
+    applyRule: (m) => { m.heatDecayMult = 0.5; },
   },
   {
     id: "juggernaut", name: "JUGGERNAUT", cost: 300, slots: 2,
-    desc: "+40 hull · −8% speed · −10% handling. Built to grind walls and win anyway.",
+    desc: "+40 hull · −8% speed · −10% handling.",
+    ruleDesc: "Wall scrapes deal ZERO damage and BUILD heat — the wall is your racing line.",
     primary: 0x1a5a44, accent: 0x8aff6a, bodyScale: [1.35, 1.1, 0.95],
     stats: S({ hullDelta: 40, maxSpeedMult: 0.92, accelMult: 0.95, lateralMult: 0.9 }),
+    applyRule: (m) => { m.scrapeArmor = 0; m.scrapeBuildsHeat = true; },
   },
   {
     id: "razor", name: "RAZOR", cost: 500, slots: 3,
-    desc: "+12% speed · +20% handling · −25 hull. One mistake from the void.",
+    desc: "+12% speed · +20% handling · −25 hull.",
+    ruleDesc: "HEAT builds 2× and caps at ×6 — but any hit resets it to ×1.",
     primary: 0x6a1040, accent: 0xff3ec8, bodyScale: [0.75, 0.9, 1.2],
     stats: S({ maxSpeedMult: 1.12, accelMult: 1.05, lateralMult: 1.2, hullDelta: -25 }),
+    applyRule: (m) => { m.heatBuildMult = 2; m.maxHeatTier = 6; m.heatHitLoss = 99; },
   },
   {
     id: "metronome", name: "METRONOME", cost: 800, slots: 3,
-    desc: "+60ms beat window · +25% boost · −10 hull. Lives inside the groove.",
+    desc: "+60ms beat window · +25% boost · −10 hull.",
+    ruleDesc: "GROOVE survives one missed gate, and regenerates hull twice as fast.",
     primary: 0x7a5210, accent: 0xffc44e, bodyScale: [1, 1, 1.05],
     stats: S({ rhythmDelta: 0.06, boostDelta: 0.25, hullDelta: -10 }),
+    applyRule: (m) => { m.grooveMissForgive = 1; m.grooveRegenMult = 2; },
   },
   {
     id: "phantom", name: "PHANTOM", cost: 1200, slots: 3,
-    desc: "Sector shield · +3% speed · wider magnet. Slips through everything once.",
+    desc: "+3% speed · +5% handling · wider magnet.",
+    ruleDesc: "Dashes last 50% longer with doubled refunds — but only 2 pips. The scalpel.",
     primary: 0x2a1060, accent: 0xb04eff, bodyScale: [0.9, 0.85, 1.1],
-    stats: S({ maxSpeedMult: 1.03, lateralMult: 1.05, shieldPerSegment: 1, magnetDelta: 2 }),
+    stats: S({ maxSpeedMult: 1.03, lateralMult: 1.05, magnetDelta: 2 }),
+    applyRule: (m) => { m.dashDurMult = 1.5; m.pipRefundMult = 2; m.maxPips = 2; },
   },
 ];
 

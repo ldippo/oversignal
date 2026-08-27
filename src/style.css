@@ -177,6 +177,53 @@ body {
   box-shadow: 0 0 10px rgba(78, 243, 255, 0.8);
 }
 
+.hud-heat {
+  position: absolute;
+  bottom: 140px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heat-mult {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--hud-amber);
+  text-shadow: 0 0 10px rgba(255, 196, 78, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-heat.hot .heat-mult {
+  color: #ff6a3e;
+  text-shadow: 0 0 14px rgba(255, 106, 62, 0.8);
+}
+
+.heat-segs {
+  display: flex;
+  gap: 4px;
+}
+
+.heat-segs i {
+  --fill: 0%;
+  width: 16px;
+  height: 8px;
+  transform: skewX(-18deg);
+  border: 1px solid rgba(255, 196, 78, 0.5);
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 196, 78, 0.9) var(--fill), rgba(255, 196, 78, 0.1) var(--fill));
+}
+
+.heat-segs i.full {
+  background: var(--hud-amber);
+  box-shadow: 0 0 8px rgba(255, 196, 78, 0.7);
+}
+
+.card-rule {
+  color: rgba(255, 62, 200, 0.9) !important;
+  font-weight: 600;
+}
+
 .hud-sync {
   position: absolute;
   top: 22px;
@@ -1767,6 +1814,9 @@ body {
   .hud-seg { font-size: 14px; top: 12px; left: 18px; letter-spacing: 2px; }
   .hud-score { font-size: 18px; top: 12px; right: 18px; }
   .hud-combo { font-size: 24px; bottom: 64px; right: 22px; }
+  .hud-heat { bottom: 100px; right: 18px; }
+  .heat-mult { font-size: 16px; }
+  .heat-segs i { width: 12px; height: 7px; }
   .hud-banner { font-size: 26px; letter-spacing: 4px; }
   .screen h1 { font-size: 40px; letter-spacing: 6px; }
   .screen h2 { font-size: 22px; }

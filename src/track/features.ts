@@ -448,17 +448,25 @@ export class FeatureField {
         f.taken = true;
         events.push({ kind: f.kind, feature: f, collected: true });
       } else if (f.kind === "fence") {
-        // edge lane past the membrane = clean dodge, no event either way
-        if (dist < f.halfW) events.push({ kind: "fence", feature: f, collected: true });
+        // through the membrane = collected; edge lane = miss event (main
+        // rewards it as a near-miss only when the fence was closed)
+        events.push({ kind: "fence", feature: f, collected: dist < f.halfW });
       } else if (f.kind === "ring" || f.kind === "core") {
         const hit = dist < f.halfW + magnetRadius;
         f.taken = true;
         if (hit) f.mesh.visible = false;
         events.push({ kind: f.kind, feature: f, collected: hit });
-      } else if (dist < f.halfW + 1.4) {
-        f.taken = true;
-        f.mesh.visible = false;
-        events.push({ kind: f.kind, feature: f, collected: true });
+      } else {
+        // shard / barrier: hit, or a shave inside the near-miss band
+        const hitReach = f.halfW + 1.4;
+        if (dist < hitReach) {
+          f.taken = true;
+          f.mesh.visible = false;
+          events.push({ kind: f.kind, feature: f, collected: true });
+        } else if (dist < hitReach + 2.5) {
+          f.taken = true; // one shave per hazard
+          events.push({ kind: f.kind, feature: f, collected: false });
+        }
       }
     }
     return events;
